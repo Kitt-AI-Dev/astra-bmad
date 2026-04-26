@@ -1,6 +1,7 @@
 import 'server-only'
 import Anthropic from '@anthropic-ai/sdk'
 import { Resend } from 'resend'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase-server'
 import {
   parseCustomId,
@@ -176,6 +177,10 @@ export async function runBatchRetrieve(): Promise<void> {
           `Failed to upsert readings for batch ${batch.anthropic_batch_id}: ${insertErr.message}`
         )
       }
+
+      const affected = new Set<string>()
+      for (const r of readings) affected.add(`${r.sign}/${r.role}`)
+      for (const path of affected) revalidatePath(`/${path}`)
     }
 
     totalSucceeded += readings.length
