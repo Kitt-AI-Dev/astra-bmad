@@ -1,30 +1,16 @@
 import 'server-only'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
+// Service-role client for admin/cron paths. Auth is enforced by middleware
+// (admin) or CRON_SECRET (cron) before any caller reaches this; using the SSR
+// client here would attach the user's JWT and break RLS-protected writes.
 export async function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url) throw new Error('Missing env var: NEXT_PUBLIC_SUPABASE_URL')
   if (!key) throw new Error('Missing env var: SUPABASE_SERVICE_ROLE_KEY')
 
-  const cookieStore = await cookies()
-
-  return createServerClient(url, key, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll()
-      },
-      setAll(cookiesToSet) {
-        try {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          )
-        } catch {
-          // Called from a Server Component — cookie writes are silently ignored.
-          // Middleware is responsible for session refresh.
-        }
-      },
-    },
+  return createSupabaseClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
   })
 }
