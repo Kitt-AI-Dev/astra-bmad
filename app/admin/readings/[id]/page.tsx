@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-server'
+
+export const dynamic = 'force-dynamic'
 import { Badge } from '@/components/ui/badge'
 import { ReadingEditForm } from '@/components/admin/ReadingEditForm'
 

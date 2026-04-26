@@ -1,6 +1,8 @@
 import Link from 'next/link'
 
 import { createClient } from '@/lib/supabase-server'
+
+export const dynamic = 'force-dynamic'
 import { MonthSelector } from '@/components/admin/MonthSelector'
 import {
   Table,
