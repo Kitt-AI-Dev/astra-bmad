@@ -5,13 +5,7 @@ import "./globals.css";
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-jetbrains-mono",
-  fallback: [
-    "Apple Symbols",
-    "Segoe UI Symbol",
-    "Noto Sans Symbols 2",
-    "Symbola",
-    "monospace",
-  ],
+  fallback: ["monospace"],
 });
 
 export const metadata: Metadata = {
