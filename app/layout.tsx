@@ -5,6 +5,7 @@ import "./globals.css";
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-jetbrains-mono",
+  fallback: ["monospace"],
 });
 
 export const metadata: Metadata = {

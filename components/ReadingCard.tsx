@@ -50,7 +50,7 @@ export function ReadingCard({ reading, nullVariant = 'not-published' }: ReadingC
   if (!reading) {
     return (
       <div aria-live="polite">
-        <article className="border border-border rounded-lg p-4 md:p-6 bg-surface">
+        <article className="border border-border rounded-lg p-4 bg-surface">
           <p className="text-[13px] text-text-secondary">
             {nullVariant === 'unavailable' ? '// reading unavailable' : '// reading not yet published'}
           </p>
@@ -63,19 +63,15 @@ export function ReadingCard({ reading, nullVariant = 'not-published' }: ReadingC
 
   return (
     <div aria-live="polite">
-      <article className="border border-border rounded-lg p-4 md:p-6 bg-surface">
-        <h2 className="text-[13px] font-mono text-text-secondary mb-3">
-          {'// reading: '}{reading.sign}/{reading.role}{' · '}
-          <time dateTime={reading.date}>{reading.date}</time>
-        </h2>
+      <article className="border border-border rounded-lg p-4 bg-surface">
         <div className="text-[13px] font-mono text-foreground leading-[1.8] whitespace-pre-wrap">
           {renderBody(body)}
         </div>
         {stats.length > 0 && (
-          <div className="border-t border-border mt-4 pt-4 flex flex-wrap gap-6">
+          <div className="border-t border-border mt-5 pt-4 flex flex-wrap gap-6">
             {stats.map((stat) => (
               <div key={stat.label} className="flex flex-col gap-1">
-                <span className="text-[11px] uppercase tracking-wide text-text-secondary">{stat.label}</span>
+                <span className="text-[10px] uppercase tracking-[.1em] text-text-secondary">{stat.label}</span>
                 <span className="text-[13px] text-accent-gold font-mono">{stat.value}</span>
               </div>
             ))}
@@ -89,7 +85,7 @@ export function ReadingCard({ reading, nullVariant = 'not-published' }: ReadingC
 export function ReadingCardSkeleton() {
   return (
     <div aria-live="polite">
-      <div className="border border-border rounded-lg p-4 md:p-6 bg-surface animate-pulse">
+      <div className="border border-border rounded-lg p-4 bg-surface animate-pulse">
         <div className="h-3 w-48 bg-border rounded mb-4" />
         <div className="space-y-2">
           <div className="h-3 w-full bg-border rounded" />

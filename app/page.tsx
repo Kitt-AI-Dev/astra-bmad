@@ -1,5 +1,6 @@
 import HomeRedirect from '@/components/HomeRedirect'
 import SignRoleSelector from '@/components/SignRoleSelector'
+import { Header } from '@/components/Header'
 
 export default async function Home({
   searchParams,
@@ -8,8 +9,9 @@ export default async function Home({
 }) {
   const { change } = await searchParams
   return (
-    <main className="min-h-screen bg-background px-4 py-8">
-      <div className="max-w-[680px] mx-auto">
+    <main className="min-h-screen bg-background px-6 pt-4 pb-10">
+      <div className="max-w-[700px] mx-auto">
+        <Header />
         <HomeRedirect skipRedirect={change === '1'} />
         <SignRoleSelector />
       </div>

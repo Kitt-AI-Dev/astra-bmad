@@ -6,6 +6,7 @@ import { SIGNS, ROLES } from '@/lib/constants'
 import type { Sign, Role } from '@/lib/constants'
 import { ReadingCard } from '@/components/ReadingCard'
 import { ShareFooter } from '@/components/ShareFooter'
+import { Header } from '@/components/Header'
 import { formatSign, formatRole } from '@/lib/format'
 
 export const dynamicParams = true
@@ -112,8 +113,12 @@ export default async function DatePage({
   }
 
   return (
-    <main className="min-h-screen bg-background px-4 py-8">
-      <div id="reading" className="max-w-[680px] mx-auto">
+    <main className="min-h-screen bg-background px-6 pt-4 pb-10">
+      <div id="reading" className="max-w-[700px] mx-auto">
+        <Header />
+        <p className="text-[13px] font-mono text-accent-gold mb-5">
+          {'$ '}<span className="text-accent-violet">404tune</span>{` --sign ${sign} --role ${role} --date ${date}`}
+        </p>
         <ReadingCard reading={reading} nullVariant={date < today ? 'unavailable' : 'not-published'} />
         {reading && <ShareFooter url={`${base}/${sign}/${role}/${reading.date}`} />}
       </div>

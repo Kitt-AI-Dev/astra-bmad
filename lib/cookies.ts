@@ -24,6 +24,10 @@ export function getPrefs(): { sign: Sign; role: Role } | null {
   }
 }
 
+export function clearPrefs(): void {
+  Cookies.remove(COOKIE_NAME, { path: '/' })
+}
+
 export function setPrefs(sign: Sign, role: Role): void {
   Cookies.set(COOKIE_NAME, JSON.stringify({ sign, role }), {
     expires: COOKIE_EXPIRES,

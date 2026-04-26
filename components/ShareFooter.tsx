@@ -1,10 +1,13 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { clearPrefs } from '@/lib/cookies'
 
-export function ShareFooter({ url }: { url: string }) {
+export function ShareFooter({ url, changeHref }: { url: string; changeHref?: string }) {
   const [copied, setCopied] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const router = useRouter()
 
   useEffect(() => {
     return () => {
@@ -26,14 +29,22 @@ export function ShareFooter({ url }: { url: string }) {
   return (
     <div className="mt-3">
       <p className="text-[13px] font-mono text-text-secondary">exit 0</p>
-      <div className="border-t border-border mt-2 pt-3">
+      <div className="border-t border-border mt-5 pt-5 flex items-center gap-4">
         <button
           onClick={handleCopy}
           aria-label="Copy shareable link to this reading"
-          className="w-full md:w-auto text-[13px] font-mono text-accent-violet border border-accent-violet px-4 min-h-[44px] rounded hover:bg-accent-violet/10 transition-colors"
+          className="text-[12px] font-mono text-accent-violet border border-accent-violet px-4 py-2 rounded hover:bg-accent-violet hover:text-white transition-colors"
         >
           {copied ? '✓ link copied' : '$ share --copy-link'}
         </button>
+        {changeHref && (
+          <button
+            onClick={() => { clearPrefs(); router.push(changeHref) }}
+            className="ml-auto text-[13px] font-mono text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+          >
+            {'[← change identity]'}
+          </button>
+        )}
       </div>
     </div>
   )

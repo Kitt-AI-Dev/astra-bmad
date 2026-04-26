@@ -1,12 +1,12 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { createPublicClient } from '@/lib/supabase-server-public'
 import { SIGNS, ROLES } from '@/lib/constants'
 import type { Sign, Role } from '@/lib/constants'
 import { ReadingCard } from '@/components/ReadingCard'
 import { DateGuard } from '@/components/DateGuard'
 import { ShareFooter } from '@/components/ShareFooter'
+import { Header } from '@/components/Header'
 import { formatSign, formatRole } from '@/lib/format'
 
 export const revalidate = 86400
@@ -95,20 +95,16 @@ export default async function SignRolePage({
   }
 
   return (
-    <main className="min-h-screen bg-background px-4 py-8">
-      <div id="reading" className="max-w-[680px] mx-auto">
+    <main className="min-h-screen bg-background px-6 pt-4 pb-10">
+      <div id="reading" className="max-w-[700px] mx-auto">
+        <Header />
+        <p className="text-[13px] font-mono text-accent-gold mb-5">
+          {'$ '}<span className="text-accent-violet">404tune</span>{` --sign ${sign} --role ${role} --date ${today}`}
+        </p>
         <DateGuard serverDate={today} sign={sign} role={role} />
         <div className="animate-in fade-in duration-150">
           <ReadingCard reading={reading} nullVariant="not-published" />
-          {reading && <ShareFooter url={`${base}/${sign}/${role}/${reading.date}`} />}
-        </div>
-        <div className="mt-4">
-          <Link
-            href="/?change=1"
-            className="text-[13px] font-mono text-text-secondary hover:text-text-primary transition-colors"
-          >
-            {'[← change identity]'}
-          </Link>
+          {reading && <ShareFooter url={`${base}/${sign}/${role}/${reading.date}`} changeHref="/?change=1" />}
         </div>
       </div>
     </main>

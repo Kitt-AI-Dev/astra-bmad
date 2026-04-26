@@ -6,12 +6,18 @@ import { SIGNS, ROLES } from '@/lib/constants'
 import type { Sign, Role } from '@/lib/constants'
 import { getPrefs, setPrefs } from '@/lib/cookies'
 
+const SIGN_SYMBOLS: Record<string, string> = {
+  aries: '♈︎', taurus: '♉︎', gemini: '♊︎', cancer: '♋︎',
+  leo: '♌︎', virgo: '♍︎', libra: '♎︎', scorpio: '♏︎',
+  sagittarius: '♐︎', capricorn: '♑︎', aquarius: '♒︎', pisces: '♓︎',
+}
+
 function chipClass(selected: boolean): string {
   const base =
-    'min-h-[44px] min-w-[44px] px-3 py-2 border rounded text-[13px] font-mono transition-none focus-visible:outline-2 focus-visible:outline-accent-violet cursor-pointer'
+    'bg-transparent px-3 py-1.5 border rounded-[4px] text-[12px] font-mono cursor-pointer transition-all duration-150'
   return selected
-    ? `${base} border-accent-violet text-accent-violet`
-    : `${base} border-border text-text-secondary hover:border-accent-violet/50`
+    ? `${base} border-accent-gold text-accent-gold`
+    : `${base} border-border text-text-secondary hover:border-text-secondary hover:text-text-primary`
 }
 
 export default function SignRoleSelector() {
@@ -72,15 +78,15 @@ export default function SignRoleSelector() {
 
   return (
     <div>
-      <p className="text-[13px] font-mono text-text-secondary mb-6">
-        {'$ horoscope --select-identity'}
+      <p className="text-[13px] font-mono text-accent-gold mb-5">
+        {'$ '}<span className="text-accent-violet">404tune</span>{' --select-identity'}
       </p>
 
       <fieldset className="border-0 p-0 m-0 min-w-0">
-        <legend className="text-[13px] font-mono text-text-secondary mb-3">
+        <legend className="text-[13px] font-mono text-text-secondary mb-5">
           {'// select sign'}
         </legend>
-        <div ref={signContainerRef} className="grid grid-cols-3 gap-2">
+        <div ref={signContainerRef} className="grid grid-cols-[repeat(3,max-content)] gap-2">
           {SIGNS.map((s, i) => {
             const isSelected = sign === s
             const tabIdx = isSelected ? 0 : sign === null && i === 0 ? 0 : -1
@@ -94,18 +100,18 @@ export default function SignRoleSelector() {
                 onKeyDown={(e) => handleKeyDown(e, SIGNS, sign, handleSignSelect, signContainerRef)}
                 className={chipClass(isSelected)}
               >
-                {s}
+                {SIGN_SYMBOLS[s]} {s}
               </button>
             )
           })}
         </div>
       </fieldset>
 
-      <fieldset className="border-0 p-0 m-0 min-w-0 mt-6">
-        <legend className="text-[13px] font-mono text-text-secondary mb-3">
+      <fieldset className="border-0 p-0 m-0 min-w-0 mt-5">
+        <legend className="text-[13px] font-mono text-text-secondary mb-5">
           {'// select role'}
         </legend>
-        <div ref={roleContainerRef} className="flex flex-wrap gap-2">
+        <div ref={roleContainerRef} className="flex flex-wrap gap-3">
           {ROLES.map((r, i) => {
             const isSelected = role === r
             const tabIdx = isSelected ? 0 : role === null && i === 0 ? 0 : -1
