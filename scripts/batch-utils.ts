@@ -87,7 +87,7 @@ export const ROLE_VOCABULARY: Record<Role, string> = {
     'architecture diagram, trade-off, scalability, CAP theorem, event-driven, microservices, API contract, cloud region, SLA, HA, DR, cost optimization, vendor lock-in, ADR, throughput, latency, idempotency, eventual consistency',
 }
 
-// Canonical prompt template — copied from docs/prompt-style-guide.md Section 6 v1.1.
+// Canonical prompt template — copied from docs/prompt-style-guide.md Section 6 v2.0.
 // Do NOT read the markdown file at runtime.
 const PROMPT_TEMPLATE = `You are writing a daily tech horoscope for 404tune — a site where software workers check their zodiac-based reading for the day.
 
@@ -103,16 +103,27 @@ Sign personality: {sign_personality}
 
 Role vocabulary (use this domain exclusively): {role_vocabulary}
 
-Write a single daily reading for a {sign} {role_label}. Follow this structure exactly:
-1. Open with: [Planet] [aspect] your [role-relevant domain] today, [Sign].
-   Valid aspects: squares (tension), trines (flow), conjuncts (amplification), opposes (conflict), sextiles (opportunity requiring action)
-2. 2–3 sentences of reading body: situation → insight → guidance. Stay in the role's domain. Weave in the month context subtly — don't state it directly.
-3. One lucky item line: Lucky [role-specific noun]: [specific value].
-4. Optional kicker: Avoid: [specific thing]. (1–2 sentences — use it if it makes the reading land harder; the second sentence can be a callback or punchline)
+Output a single JSON object with EXACTLY these four string fields and no others:
 
-Total length: 3–5 sentences. Tight. No padding.
+{
+  "general_reading": "...",
+  "lucky_value": "...",
+  "avoid": "...",
+  "planetary_influence": "..."
+}
 
-Output ONLY the reading text. No title. No label. No preamble. No "Here is your reading:".`
+Field guidance:
+
+- general_reading — 2 to 3 sentences total. Open with: [Planet] [aspect] your [role-relevant domain] today, [Sign]. Then situation → insight → guidance. Stay strictly in the role's vocabulary. Weave in the month context subtly. No padding. Do NOT include the lucky item line or the avoid line here.
+  Valid aspect verbs: squares (tension), trines (flow), conjuncts (amplification), opposes (conflict), sextiles (opportunity requiring action).
+
+- lucky_value — a concrete, role-specific token formatted as it would actually appear in that domain. The card displays this under a static "LUCKY NAMESPACE" header — do not include any label in the value. Pick a value type appropriate to {role_label}: Software Engineer → branch name; DevOps → kubectl namespace or cluster name; QA → test environment; Frontend → CSS property/value; Product Manager → story point estimate; Data Scientist → random seed or experiment ID; UX Designer → Figma frame name; Solutions Architect → cloud region. Examples: "fix/not-my-bug", "staging-only", "qa-blue", "position: relative", "3", "42", "exploration-v3", "us-east-1". One short token or phrase, MAX 24 characters. No prose.
+
+- avoid — what to avoid today. One specific thing, optionally followed by a callback punchline. MAX 50 characters total. Examples: "Fridays. Especially this one." (29 chars), "Merging to main before the CI logs load." (40), "The estimation meeting. It already knows." (41).
+
+- planetary_influence — astrological shorthand for the day's dominant aspect, in the form "<Planet> <symbol> <Body>". Use the planet from your general_reading opening. Symbols: ☌ conjunction, ☍ opposition, □ square, △ trine, ✶ sextile. Examples: "Saturn □ Mars", "Mercury ☍ Jupiter", "Venus △ Moon", "Mars ☌ Sun", "Sun ✶ Pluto". MAX 20 characters. Match the symbol to the aspect verb you used in general_reading.
+
+Output the JSON object only. No markdown code fences. No prose before or after. No "Here is your reading:". The very first character of your response must be { and the very last must be }.`
 
 export function buildPrompt(
   sign: string,

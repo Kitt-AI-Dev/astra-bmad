@@ -14,7 +14,7 @@ const SIGN_SYMBOLS: Record<string, string> = {
 
 function chipClass(selected: boolean): string {
   const base =
-    'bg-transparent px-3 py-1.5 border rounded-[4px] text-[12px] font-mono cursor-pointer transition-all duration-150'
+    'bg-transparent px-2 sm:px-3 py-1.5 border rounded-[4px] text-[11px] sm:text-[12px] font-mono cursor-pointer transition-all duration-150'
   return selected
     ? `${base} border-accent-gold text-accent-gold`
     : `${base} border-border text-text-secondary hover:border-text-secondary hover:text-text-primary`
@@ -86,7 +86,7 @@ export default function SignRoleSelector() {
         <legend className="text-[13px] font-mono text-text-secondary mb-5">
           {'// select sign'}
         </legend>
-        <div ref={signContainerRef} className="grid grid-cols-[repeat(3,max-content)] gap-2">
+        <div ref={signContainerRef} className="grid grid-cols-2 min-[390px]:grid-cols-3 gap-2">
           {SIGNS.map((s, i) => {
             const isSelected = sign === s
             const tabIdx = isSelected ? 0 : sign === null && i === 0 ? 0 : -1
@@ -98,7 +98,7 @@ export default function SignRoleSelector() {
                 tabIndex={tabIdx}
                 onClick={() => handleSignSelect(s)}
                 onKeyDown={(e) => handleKeyDown(e, SIGNS, sign, handleSignSelect, signContainerRef)}
-                className={chipClass(isSelected)}
+                className={`${chipClass(isSelected)} w-full`}
               >
                 {SIGN_SYMBOLS[s]} {s}
               </button>

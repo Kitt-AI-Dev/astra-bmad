@@ -198,7 +198,7 @@ export async function runBatchRetrieve(): Promise<void> {
             custom_id: buildCustomId(sign, role, date),
             params: {
               model: 'claude-haiku-4-5-20251001',
-              max_tokens: 300,
+              max_tokens: 400,
               messages: [{ role: 'user', content: buildPrompt(sign, role, date, monthTheme) }],
             },
           })
