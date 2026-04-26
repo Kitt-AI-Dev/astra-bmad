@@ -1,18 +1,14 @@
+import 'server-only'
 import Anthropic from '@anthropic-ai/sdk'
-import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
+import { createClient } from '@/lib/supabase-server'
 import {
   parseCustomId,
   buildCustomId,
   buildPrompt,
   getMonthTheme,
-  requireEnv,
   type BatchRequest,
-} from './batch-utils'
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+} from '@/scripts/batch-utils'
 
 type BatchRow = {
   id: string
@@ -34,10 +30,6 @@ type ReadingRow = {
   batch_month: string
 }
 
-// ---------------------------------------------------------------------------
-// Deadline helper
-// ---------------------------------------------------------------------------
-
 function isDeadlineAtRisk(batchMonth: string, erroredCount: number): boolean {
   if (erroredCount === 0) return false
   const [year, month] = batchMonth.split('-').map(Number)
@@ -45,27 +37,29 @@ function isDeadlineAtRisk(batchMonth: string, erroredCount: number): boolean {
   return new Date() > deadline
 }
 
-// ---------------------------------------------------------------------------
-// Email notification
-// ---------------------------------------------------------------------------
-
 async function sendNotification({
   totalSucceeded,
   totalErrored,
   retrySubmitted,
   processedCount,
   batchMonths,
+  perMonthErrors,
 }: {
   totalSucceeded: number
   totalErrored: number
   retrySubmitted: boolean
   processedCount: number
   batchMonths: string[]
+  perMonthErrors: Record<string, number>
 }) {
-  const resend = new Resend(requireEnv('RESEND_API_KEY'))
-  const adminEmail = requireEnv('ADMIN_EMAIL')
+  const resendKey = process.env.RESEND_API_KEY
+  const adminEmail = process.env.ADMIN_EMAIL
+  if (!resendKey) throw new Error('Missing required environment variable: RESEND_API_KEY')
+  if (!adminEmail) throw new Error('Missing required environment variable: ADMIN_EMAIL')
+
+  const resend = new Resend(resendKey)
   const monthLabel = batchMonths.length > 0 ? batchMonths.join(', ') : 'none'
-  const atRisk = batchMonths.some((m) => isDeadlineAtRisk(m, totalErrored))
+  const atRisk = batchMonths.some((m) => isDeadlineAtRisk(m, perMonthErrors[m] ?? 0))
   const deadlineWarning = atRisk
     ? '\n⚠️ WARNING: 28th deadline has passed. Some readings may be missing.'
     : '\nDeadline OK.'
@@ -87,46 +81,33 @@ ${deadlineWarning}`
   })
 
   if (error) {
-    console.error('[retrieve-batch] Failed to send notification email:', error)
+    console.error('[batch-retrieve] Failed to send notification email:', error)
   } else {
-    console.log('[retrieve-batch] Notification email sent to', adminEmail)
+    console.log('[batch-retrieve] Notification email sent to', adminEmail)
   }
 }
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
+export async function runBatchRetrieve(): Promise<void> {
+  const anthropicKey = process.env.ANTHROPIC_API_KEY
+  if (!anthropicKey) throw new Error('Missing required environment variable: ANTHROPIC_API_KEY')
 
-async function main() {
-  const anthropic = new Anthropic({ apiKey: requireEnv('ANTHROPIC_API_KEY') })
-  const supabase = createClient(
-    requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
-    requireEnv('SUPABASE_SERVICE_ROLE_KEY'),
-  )
+  const anthropic = new Anthropic({ apiKey: anthropicKey })
+  const supabase = await createClient()
 
-  // 1. Load all submitted batches
   const { data: pendingBatches, error: loadErr } = await supabase
     .from('batches')
     .select('*')
     .eq('status', 'submitted')
 
   if (loadErr) {
-    console.error('[retrieve-batch] Failed to load batches:', loadErr)
-    process.exit(1)
+    throw new Error(`Failed to load batches: ${loadErr.message}`)
   }
 
   const batches = (pendingBatches ?? []) as BatchRow[]
-  console.log(`[retrieve-batch] Found ${batches.length} pending batch(es)`)
+  console.log(`[batch-retrieve] Found ${batches.length} pending batch(es)`)
 
   if (batches.length === 0) {
-    console.log('[retrieve-batch] No pending batches — sending notification and exiting.')
-    await sendNotification({
-      totalSucceeded: 0,
-      totalErrored: 0,
-      retrySubmitted: false,
-      processedCount: 0,
-      batchMonths: [],
-    })
+    console.log('[batch-retrieve] No pending batches — exiting.')
     return
   }
 
@@ -135,57 +116,73 @@ async function main() {
   let retrySubmitted = false
   let processedCount = 0
   const batchMonths: string[] = []
+  const perMonthErrors: Record<string, number> = {}
 
   for (const batch of batches) {
-    console.log(`[retrieve-batch] Checking batch ${batch.anthropic_batch_id} (month=${batch.batch_month})`)
+    console.log(
+      `[batch-retrieve] Checking batch ${batch.anthropic_batch_id} (month=${batch.batch_month})`
+    )
 
-    // 2. Check Anthropic processing status
     const apiBatch = await anthropic.beta.messages.batches.retrieve(batch.anthropic_batch_id)
     if (apiBatch.processing_status !== 'ended') {
-      console.log(`[retrieve-batch] Batch ${batch.anthropic_batch_id} status=${apiBatch.processing_status} — skipping`)
+      console.log(
+        `[batch-retrieve] Batch ${batch.anthropic_batch_id} status=${apiBatch.processing_status} — skipping`
+      )
       continue
     }
 
-    // 3. Stream results — NEVER abort mid-loop
     const readings: ReadingRow[] = []
     const errorIds: string[] = []
 
-    for await (const result of await anthropic.beta.messages.batches.results(batch.anthropic_batch_id)) {
+    for await (const result of await anthropic.beta.messages.batches.results(
+      batch.anthropic_batch_id
+    )) {
       if (result.result.type === 'succeeded') {
         const { sign, role, date } = parseCustomId(result.custom_id)
         const contentBlock = result.result.message.content[0]
         if (contentBlock?.type === 'text') {
-          readings.push({ sign, role, date, content: contentBlock.text, batch_month: batch.batch_month })
+          readings.push({
+            sign,
+            role,
+            date,
+            content: contentBlock.text,
+            batch_month: batch.batch_month,
+          })
         } else {
-          // Succeeded but no text block — treat as error so it gets retried
           errorIds.push(result.custom_id)
-          console.error(`[retrieve-batch] succeeded but no text content: ${result.custom_id}`)
+          console.error(
+            `[batch-retrieve] succeeded but no text content: ${result.custom_id}`
+          )
         }
       } else {
         errorIds.push(result.custom_id)
-        console.error(`[retrieve-batch] failed: ${result.custom_id} type=${result.result.type}`)
+        console.error(
+          `[batch-retrieve] failed: ${result.custom_id} type=${result.result.type}`
+        )
       }
     }
 
-    console.log(`[retrieve-batch] Batch ${batch.anthropic_batch_id}: ${readings.length} succeeded, ${errorIds.length} errored`)
+    console.log(
+      `[batch-retrieve] Batch ${batch.anthropic_batch_id}: ${readings.length} succeeded, ${errorIds.length} errored`
+    )
 
-    // 4. Bulk upsert readings (ON CONFLICT DO NOTHING — idempotent re-runs)
     if (readings.length > 0) {
       const { error: insertErr } = await supabase.from('readings').upsert(readings, {
         onConflict: 'sign,role,date',
         ignoreDuplicates: true,
       })
       if (insertErr) {
-        console.error('[retrieve-batch] readings upsert error:', insertErr)
+        throw new Error(
+          `Failed to upsert readings for batch ${batch.anthropic_batch_id}: ${insertErr.message}`
+        )
       }
     }
 
     totalSucceeded += readings.length
     totalErrored += errorIds.length
     if (!batchMonths.includes(batch.batch_month)) batchMonths.push(batch.batch_month)
+    perMonthErrors[batch.batch_month] = (perMonthErrors[batch.batch_month] ?? 0) + errorIds.length
 
-    // 5. Submit retry batch BEFORE updating status — if retry fails, batch stays 'submitted' and
-    // the next retrieve run will re-attempt rather than permanently losing the error IDs.
     if (errorIds.length > 0) {
       const monthTheme = getMonthTheme(batch.batch_month)
       const retryRequests: BatchRequest[] = []
@@ -201,12 +198,17 @@ async function main() {
             },
           })
         } catch (parseErr) {
-          console.error(`[retrieve-batch] Could not rebuild prompt for malformed custom_id "${customId}":`, parseErr)
+          console.error(
+            `[batch-retrieve] Could not rebuild prompt for malformed custom_id "${customId}":`,
+            parseErr
+          )
         }
       }
 
       if (retryRequests.length > 0) {
-        const retryBatch = await anthropic.beta.messages.batches.create({ requests: retryRequests })
+        const retryBatch = await anthropic.beta.messages.batches.create({
+          requests: retryRequests,
+        })
 
         const { error: retryInsertErr } = await supabase.from('batches').insert({
           anthropic_batch_id: retryBatch.id,
@@ -218,15 +220,16 @@ async function main() {
         })
 
         if (retryInsertErr) {
-          console.error('[retrieve-batch] Failed to insert retry batch record:', retryInsertErr)
+          console.error('[batch-retrieve] Failed to insert retry batch record:', retryInsertErr)
         } else {
           retrySubmitted = true
-          console.log(`[retrieve-batch] Retry batch submitted: ${retryBatch.id} (${retryRequests.length} requests)`)
+          console.log(
+            `[batch-retrieve] Retry batch submitted: ${retryBatch.id} (${retryRequests.length} requests)`
+          )
         }
       }
     }
 
-    // 6. Update batch to processed — done after retry so errors are never orphaned if retry fails
     const { error: updateErr } = await supabase
       .from('batches')
       .update({
@@ -238,19 +241,22 @@ async function main() {
       .eq('id', batch.id)
 
     if (updateErr) {
-      console.error(`[retrieve-batch] Failed to update batch ${batch.id}:`, updateErr)
+      console.error(`[batch-retrieve] Failed to update batch ${batch.id}:`, updateErr)
     }
 
     processedCount++
   }
 
-  console.log(`[retrieve-batch] Done. processed=${processedCount} succeeded=${totalSucceeded} errored=${totalErrored} retrySubmitted=${retrySubmitted}`)
+  console.log(
+    `[batch-retrieve] Done. processed=${processedCount} succeeded=${totalSucceeded} errored=${totalErrored} retrySubmitted=${retrySubmitted}`
+  )
 
-  // 7. Send notification email
-  await sendNotification({ totalSucceeded, totalErrored, retrySubmitted, processedCount, batchMonths })
+  await sendNotification({
+    totalSucceeded,
+    totalErrored,
+    retrySubmitted,
+    processedCount,
+    batchMonths,
+    perMonthErrors,
+  })
 }
-
-main().catch((err) => {
-  console.error('[retrieve-batch] Fatal error:', err)
-  process.exit(1)
-})

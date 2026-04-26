@@ -10,10 +10,10 @@ This guide walks you through deploying the app from scratch. No prior experience
 
 | Service | What it does | Free tier? |
 |---|---|---|
-| **GitHub** | Hosts your code and runs the AI batch jobs on a schedule | Yes |
+| **GitHub** | Hosts your code (Vercel deploys from your repo) | Yes |
 | **Supabase** | The database that stores all readings and batch records | Yes |
 | **Anthropic** | The AI that writes the horoscope readings | Pay-as-you-go (very cheap) |
-| **Vercel** | Hosts the website and serves pages to visitors | Yes |
+| **Vercel** | Hosts the website, runs the AI batch jobs on a schedule, and serves pages to visitors | Yes |
 | **Sentry** | Catches errors in production so you know when something breaks | Yes |
 | **Resend** | Sends you an email when a batch job finishes | Yes (100 emails/day) |
 
@@ -94,7 +94,7 @@ Sentry tells you when something breaks in production.
    - **DSN** (looks like `https://abc123@o123456.ingest.sentry.io/789`)
    - **Organization slug** (your org name in the URL, e.g. `my-org`)
    - **Project slug** (e.g. `404tune`)
-4. Go to **Settings → Auth Tokens**, create a new token with `project:releases` and `org:read` scopes. Save it.
+4. Go to **Settings → Auth Tokens**, click **Create New Token**, choose **Organisation Token**, and give it `project:releases` and `org:read` scopes. This is your `SENTRY_AUTH_TOKEN`.
 
 ---
 
@@ -129,62 +129,21 @@ Vercel hosts the website. It connects directly to your GitHub repository and aut
 | `SUPABASE_SERVICE_ROLE_KEY` | From Step 2 — service_role key |
 | `ANTHROPIC_API_KEY` | From Step 3 |
 | `PUBLISH_TIMEZONE` | `UTC` (leave as-is unless you know you need a different timezone) |
-| `CRON_SECRET` | Make up any random string of 32+ characters — this is a password that protects the daily cache-refresh job. Example: `my-super-secret-cron-token-2026` |
+| `CRON_SECRET` | Make up any random string of 32+ characters — this is a password that protects the cron jobs (daily cache refresh and monthly batch submit/retrieve). Example: `my-super-secret-cron-token-2026` |
 | `SENTRY_DSN` | From Step 4 |
+| `SENTRY_AUTH_TOKEN` | From Step 4 — used during build to upload source maps; safe to add to Production like any other variable |
 | `SENTRY_ORG` | From Step 4 — organization slug |
 | `SENTRY_PROJECT` | From Step 4 — project slug |
 | `SENTRY_TRACES_SAMPLE_RATE` | `0.1` (for production — tracks 10% of requests) |
 | `ADMIN_EMAIL` | Your email address — this is who can log in to the admin panel |
-| `GITHUB_TOKEN` | See Step 7 below |
-| `GITHUB_REPO` | Your GitHub username and repo name, e.g. `yourname/404tune` |
 | `RESEND_API_KEY` | From Step 5 |
-
-> **Note:** `SENTRY_AUTH_TOKEN` is **not** added to Vercel runtime. It is only needed during the build — add it under **Settings → Environment Variables** with the **Build** environment checked (not Production/Preview/Development runtime).
+| `BATCH_MONTH_THEME` | Short creative theme for the current month's readings, e.g. `Autumn introspection — letting go of what no longer serves.` Update this before each monthly batch run |
 
 3. After adding all variables, go to **Deployments**, find the most recent deployment, click the three-dot menu, and choose **Redeploy**. This time it should succeed.
 
 ---
 
-## Step 7 — Create a GitHub Personal Access Token
-
-The admin panel in the app needs permission to trigger GitHub Actions (the jobs that generate and retrieve readings). You give it that permission via a token.
-
-1. On GitHub, click your profile photo (top-right) → **Settings**.
-2. Scroll down to **Developer settings** (bottom of left sidebar) → **Personal access tokens → Fine-grained tokens**.
-3. Click **Generate new token**.
-4. Give it a name like `404tune-dispatch`.
-5. Under **Repository access**, select **Only select repositories** and choose your `404tune` fork.
-6. Under **Permissions**, find **Actions** and set it to **Read and write**.
-7. Click **Generate token** and copy the value (starts with `github_pat_...`). This is what goes in the `GITHUB_TOKEN` Vercel environment variable from Step 6.
-
----
-
-## Step 8 — Add GitHub Actions secrets
-
-The automated batch jobs (that run in GitHub Actions) also need credentials. These are separate from the Vercel environment variables.
-
-1. In your GitHub repository, go to **Settings → Secrets and variables → Actions**.
-2. Under **Secrets**, click **New repository secret** and add each of the following:
-
-| Secret name | Value |
-|---|---|
-| `ANTHROPIC_API_KEY` | From Step 3 |
-| `NEXT_PUBLIC_SUPABASE_URL` | From Step 2 — Project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | From Step 2 — service_role key |
-| `RESEND_API_KEY` | From Step 5 |
-| `ADMIN_EMAIL` | Your email address |
-
-3. Under **Variables** (not Secrets), click **New repository variable** and add:
-
-| Variable name | Value |
-|---|---|
-| `BATCH_MONTH_THEME` | A short creative theme for this month's readings, e.g. `Autumn introspection — letting go of what no longer serves.` (You update this before each monthly batch run) |
-
-> **Secrets vs Variables:** Secrets are hidden (like passwords). Variables are visible to anyone with repo access. The theme is a variable because it's not sensitive — it's just creative text.
-
----
-
-## Step 9 — Generate the first month's readings
+## Step 7 — Generate the first month's readings
 
 Now comes the fun part. You need to run the AI batch job to generate horoscope readings.
 
@@ -194,9 +153,7 @@ Now comes the fun part. You need to run the AI batch job to generate horoscope r
 4. Select the target month from the dropdown (default is next month — that's correct for a first run).
 5. Click **Trigger Batch**.
 
-This sends the job to GitHub Actions. You can watch it run at `https://github.com/YOUR-USERNAME/404tune/actions`.
-
-The batch job takes about 5–10 minutes to submit all requests to Anthropic's API. Anthropic then processes them asynchronously — this usually takes another 10–30 minutes.
+The submit call runs inside Vercel and returns when Anthropic has accepted the batch (a few seconds). Anthropic then processes the requests asynchronously — this usually takes 10–30 minutes.
 
 ### Retrieve the results
 
@@ -204,13 +161,13 @@ Once Anthropic has finished (you'll get an email via Resend when it's done), com
 
 1. Go back to `/admin/batches`.
 2. Click **Retrieve Results**.
-3. This triggers another GitHub Actions job that fetches all the generated readings and saves them to your Supabase database.
+3. The retrieve runs inside Vercel, fetches all the generated readings, and saves them to your Supabase database.
 
-After the retrieve job finishes, your readings will be live at `https://your-app.vercel.app/[sign]/[role]` — for example `/aries/student`.
+After retrieve completes, your readings will be live at `https://your-app.vercel.app/[sign]/[role]` — for example `/aries/student`.
 
 ---
 
-## Step 10 — Verify everything is working
+## Step 8 — Verify everything is working
 
 Visit these URLs on your deployed app and confirm they load correctly:
 
@@ -225,11 +182,11 @@ If a reading page shows "No reading available", the batch retrieve job may still
 
 ## Monthly workflow (ongoing)
 
-Each month you need to generate new readings. The GitHub Actions workflows are scheduled to run automatically on the 25th of each month — but you can also trigger them manually:
+Each month you need to generate new readings. Vercel Cron is scheduled to run them automatically on the 25th of each month — but you can also trigger them manually from the admin panel:
 
-1. **Before the 25th:** Update the `BATCH_MONTH_THEME` repository variable (Settings → Secrets and variables → Actions → Variables) with a theme for the upcoming month.
-2. **On or after the 25th:** The batch job runs automatically, or trigger it manually from the admin panel → Batches → Trigger Batch.
-3. **After Anthropic finishes:** Click Retrieve Results in the admin panel (or wait — the retrieve job also runs automatically on the 25th–28th at 6am UTC).
+1. **Before the 25th:** Update the `BATCH_MONTH_THEME` Vercel environment variable (Settings → Environment Variables) with a theme for the upcoming month, then redeploy so the new value takes effect.
+2. **On or after the 25th:** The batch submit cron fires automatically at midnight UTC, or trigger it manually from the admin panel → Batches → Trigger Batch.
+3. **After Anthropic finishes:** Click Retrieve Results in the admin panel (or wait — the retrieve cron runs automatically on the 25th–28th at 6am UTC).
 4. **Review readings:** Browse to `/admin/readings` to check the generated content. Use the edit and suppress buttons to fix anything that looks off.
 
 ---
@@ -259,8 +216,8 @@ pnpm dev
 **The app deployed but pages show errors**
 Check Vercel's **Functions** tab for error logs. Most issues are missing environment variables — double-check all variables from Step 6 are set.
 
-**The batch job failed in GitHub Actions**
-Go to your repository → Actions tab → click the failed run → expand the failing step to read the error message. The most common cause is a missing or incorrect GitHub Actions secret (Step 8).
+**The batch job failed**
+Open the Vercel dashboard → **Logs** (or **Functions**) and filter on `/api/admin/batches/submit`, `/api/admin/batches/retrieve`, or `/api/cron/batch-*` to read the error. The most common cause is a missing environment variable.
 
 **I triggered a batch but no readings appeared**
 The process has two stages: submit (sends requests to Anthropic) and retrieve (fetches results back). Make sure you ran both. Check `/admin/batches` — a row with status `ended` or `processed` means retrieval is complete.
@@ -281,8 +238,7 @@ Log in to `/admin`, find the reading under the Readings tab, click it to open th
 | **React 19** | The UI library — builds the interactive parts of the page |
 | **Supabase** | PostgreSQL database with a simple API — stores readings, batches, and session data |
 | **Anthropic Claude** | The AI model that generates reading content via the batch API |
-| **Vercel** | Hosting platform — deploys the Next.js app and runs the daily cache cron job |
-| **GitHub Actions** | Runs the batch submit and retrieve scripts on a schedule |
+| **Vercel** | Hosting platform — deploys the Next.js app and runs the cron jobs (daily cache refresh, monthly batch submit/retrieve) |
 | **Sentry** | Error monitoring — captures and reports runtime exceptions |
 | **Resend** | Transactional email — sends batch completion notifications |
 | **Tailwind CSS v4** | Utility-based CSS framework for styling |

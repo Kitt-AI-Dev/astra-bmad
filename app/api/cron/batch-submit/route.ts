@@ -1,18 +1,18 @@
 import * as Sentry from '@sentry/nextjs'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { runBatchSubmit, getNextMonth } from '@/lib/batch/submit'
 
 export const maxDuration = 60
 
-export async function POST(request: Request) {
+export async function GET(request: NextRequest) {
+  const authHeader = request.headers.get('Authorization')
+  const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
-    const body = (await request.json().catch(() => ({}))) as { batch_month?: string }
-    const batchMonth = body.batch_month && /^\d{4}-\d{2}$/.test(body.batch_month)
-      ? body.batch_month
-      : getNextMonth()
-
-    await runBatchSubmit(batchMonth)
-
+    await runBatchSubmit(getNextMonth())
     return NextResponse.json({ success: true })
   } catch (err) {
     Sentry.captureException(err)

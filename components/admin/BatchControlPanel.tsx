@@ -95,10 +95,10 @@ export function BatchControlPanel({ batches }: { batches: BatchRow[] }) {
     setTriggerSaving(true)
     try {
       await callApi('/api/admin/batches/submit', { batch_month: batchMonth })
-      toast.success(`batch dispatch sent for ${batchMonth}`, { duration: 3000 })
+      toast.success(`batch submitted for ${batchMonth}`, { duration: 3000 })
       router.refresh()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'dispatch failed', { duration: 3000 })
+      toast.error(err instanceof Error ? err.message : 'submit failed', { duration: 3000 })
     } finally {
       setTriggerSaving(false)
     }
@@ -108,12 +108,12 @@ export function BatchControlPanel({ batches }: { batches: BatchRow[] }) {
     setRetrieveSaving(true)
     try {
       await callApi('/api/admin/batches/retrieve')
-      toast.success('retrieve dispatch sent — results will appear after job completes', {
+      toast.success('retrieve complete — refresh to see results', {
         duration: 3000,
       })
       router.refresh()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'dispatch failed', { duration: 3000 })
+      toast.error(err instanceof Error ? err.message : 'retrieve failed', { duration: 3000 })
     } finally {
       setRetrieveSaving(false)
     }

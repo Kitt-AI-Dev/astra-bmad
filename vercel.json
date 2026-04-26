@@ -1,3 +1,7 @@
 {
-  "crons": [{ "path": "/api/revalidate", "schedule": "0 0 * * *" }]
+  "crons": [
+    { "path": "/api/revalidate", "schedule": "0 0 * * *" },
+    { "path": "/api/cron/batch-submit", "schedule": "0 0 25 * *" },
+    { "path": "/api/cron/batch-retrieve", "schedule": "0 6 25-28 * *" }
+  ]
 }
