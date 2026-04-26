@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { createPublicClient } from '@/lib/supabase-server-public'
 import { SIGNS, ROLES } from '@/lib/constants'
 import type { Sign, Role } from '@/lib/constants'
@@ -100,6 +101,14 @@ export default async function SignRolePage({
         <div className="animate-in fade-in duration-150">
           <ReadingCard reading={reading} nullVariant="not-published" />
           {reading && <ShareFooter url={`${base}/${sign}/${role}/${reading.date}`} />}
+        </div>
+        <div className="mt-4">
+          <Link
+            href="/?change=1"
+            className="text-[13px] font-mono text-text-secondary hover:text-text-primary transition-colors"
+          >
+            {'[← change identity]'}
+          </Link>
         </div>
       </div>
     </main>
