@@ -1,9 +1,9 @@
 # 404tune Prompt Style Guide
 
-**Version:** 1.0  
-**Last updated:** 2026-04-22  
+**Version:** 2.3  
+**Last updated:** 2026-04-26  
 **Governs:** All reading generation via the Anthropic Batch API  
-**Used by:** `scripts/submit-batch.ts`
+**Used by:** `scripts/batch-utils.ts` (canonical prompt template; consumed by `lib/batch/submit.ts` and `lib/batch/retrieve.ts`)
 
 ---
 
@@ -51,9 +51,16 @@ Dry wit, deadpan delivery, technically literate, never condescending. The voice 
 
 ### Reference Reading (Canonical Example)
 
-> Saturn squares your on-call rotation today, Scorpio. What looks like a cascading failure is actually a misconfigured alert threshold — trust your gut before you page the team. Lucky kubectl namespace: `staging-only`. Avoid: Fridays. Especially this one.
+```json
+{
+  "general_reading": "Saturn squares your on-call rotation today, Scorpio. What looks like a cascading failure is actually a misconfigured alert threshold — trust your gut before you page the team.",
+  "lucky_value": "staging-only",
+  "avoid": "Fridays. Especially this one.",
+  "planetary_influence": "Saturn □ Mars"
+}
+```
 
-What makes it work: planetary body + role domain (on-call rotation), specific prediction (misconfigured threshold, not "problems at work"), dry guidance (trust your gut), role-specific lucky item (kubectl namespace in backtick code formatting), callback kicker with comedic timing.
+What makes it work: planetary body + role domain (on-call rotation) opens `general_reading`; specific prediction (misconfigured threshold, not "problems at work"); dry guidance (trust your gut); role-specific `lucky_value` (`staging-only` = a kubectl namespace, displayed under static `LUCKY NAMESPACE` header); callback kicker with comedic timing in `avoid`; `planetary_influence` symbol `□` matches the "squares" verb in the opening.
 
 ---
 
@@ -93,46 +100,78 @@ All three elements must be grounded in the role's actual work domain. The "insig
 
 Do not blend domains. A DevOps reading that mentions user stories has failed. A Product Manager reading about kubectl has failed.
 
-### 2.3 Lucky Item
+### 2.3 Lucky Value (`lucky_value` JSON field)
 
-**Format:** `Lucky [role-specific noun]: [specific value].`
+The card displays this under a static **LUCKY NAMESPACE** column header. The LLM emits the value only — never include a label inside the value.
 
-The value should be specific and formatted as a real value from that domain — not a description. The specificity is the joke.
+**Constraint:** ≤ 24 characters. One short token or phrase, formatted as it would appear in the role's domain. No prose.
 
-| Role | Lucky Item Options | Example |
-|------|--------------------|---------|
-| software-engineer | branch name, PR size, commit hash prefix, dependency version | `Lucky branch name: hotfix/not-your-fault` |
-| devops | kubectl namespace, on-call rotation shift, Terraform workspace, Helm chart | `Lucky kubectl namespace: staging-only` |
-| qa | test environment, regression suite name, bug severity level | `Lucky test environment: qa-blue` |
-| frontend | viewport width, CSS property, npm package, Lighthouse score | `Lucky CSS property: position: relative` |
-| product-manager | story point estimate, stakeholder, sprint goal fragment | `Lucky story point estimate: 3` |
-| data-scientist | random seed, model checkpoint, p-value, learning rate | `Lucky random seed: 42` |
-| ux-designer | Figma frame name, user archetype, whiteboard color | `Lucky Figma frame: exploration-v3` |
-| solutions-architect | cloud region, architecture diagram version, acronym | `Lucky cloud region: us-east-1` |
+The specificity is the joke — `staging-only` is funny because a kubectl namespace named "staging-only" is hostile in a way every DevOps engineer has felt. `Things will go well` is not.
 
-For software-engineer lucky branch names: use the format `type/something-plausibly-true` (e.g., `fix/not-my-bug`, `feat/actually-a-patch`, `chore/the-real-work`).
+| Role | Value Type | Examples (≤24 chars) |
+|------|-----------|----------------------|
+| software-engineer | branch name | `fix/not-my-bug`, `feat/actually-a-patch` |
+| devops | kubectl namespace, cluster, Terraform workspace | `staging-only`, `production-legacy` |
+| qa | test environment, regression suite name | `qa-blue`, `regression-flaky` |
+| frontend | CSS property/value, viewport width | `position: relative`, `1280px` |
+| product-manager | story point estimate | `3`, `13`, `?` |
+| data-scientist | random seed, experiment ID, model checkpoint | `42`, `exploration-v3` |
+| ux-designer | Figma frame name | `exploration-v7`, `final-final` |
+| solutions-architect | cloud region, ADR id, acronym | `us-east-1`, `ADR-0042`, `YAGNI` |
 
-### 2.4 Avoid Line
+For software-engineer branch names: use the format `type/something-plausibly-true` (e.g., `fix/not-my-bug`, `feat/actually-a-patch`, `chore/the-real-work`).
 
-**Format:** `Avoid: [specific thing].` Optionally followed by one more sentence.
+### 2.4 Avoid (`avoid` JSON field)
 
-Optional but strongly encouraged — use it when it makes the reading land harder. Often the best Avoid line is a callback to something in the body. Can be a single word. Can have a follow-on sentence for comedic timing.
+The card displays this under a static **AVOID** column header. The LLM emits the value only — no `Avoid:` prefix.
 
-Examples:
-- `Avoid: production deployments after 4pm.`
-- `Avoid: the estimation meeting. It already knows too much.`
-- `Avoid: clicking "merge." The branch is not as ready as it looks.`
-- `Avoid: Fridays. Especially this one.`
+**Constraint:** ≤ 50 characters total. One specific thing, optionally followed by a callback punchline. Often the best avoid line callbacks something in the body. Can be a single short clause.
 
-### 2.5 Reading Length
+Examples (within cap):
+- `Fridays. Especially this one.` (29 chars)
+- `Merging to main before the CI logs load.` (40)
+- `The estimation meeting. It already knows.` (41)
+- `Production deployments after 4pm.` (33)
 
-**Total: 3–5 sentences.** Includes the lucky item line. Tight. No padding.
+### 2.5 Reading Length & Field Caps
 
-Sentence count by component:
-- Planetary opening: 1 sentence
-- Body: 2–3 sentences
-- Lucky item: 1 line (not a full sentence grammatically, but counts)
-- Avoid: 1 line (optional)
+The reading is a single JSON object with four fields. Length is enforced per-field, not in aggregate.
+
+| Field | Constraint |
+|-------|-----------|
+| `general_reading` | 2–3 sentences, opens with the planetary aspect |
+| `lucky_value` | ≤ 24 characters |
+| `avoid` | ≤ 50 characters |
+| `planetary_influence` | ≤ 20 characters |
+
+`general_reading` includes the planetary opening as its first sentence. Do NOT include the lucky item or avoid line inside `general_reading` — those are separate fields.
+
+### 2.6 Planetary Influence (`planetary_influence` JSON field)
+
+Astrological shorthand for the day's dominant aspect, displayed under the static **PLANETARY INFLUENCE** column header.
+
+**Format:** `<Planet> <symbol> <Body>` — e.g. `Saturn □ Mars`.
+
+**Constraint:** ≤ 20 characters.
+
+**Aspect symbols (must match the verb used in the opening of `general_reading`):**
+
+| Verb | Symbol | Meaning |
+|------|--------|---------|
+| squares | `□` | tension, friction, obstacle |
+| trines | `△` | flow, ease, unexpected luck |
+| conjuncts | `☌` | amplification |
+| opposes | `☍` | conflict, competing forces |
+| sextiles | `✶` | opportunity requiring action |
+
+The planet should be the same one that opens `general_reading`. The body can be another planet or a zodiac sign.
+
+Examples (within cap):
+- `Saturn □ Mars` (13)
+- `Mercury ☍ Jupiter` (17)
+- `Venus △ Moon` (12)
+- `Mars ☌ Sun` (11)
+- `Saturn □ Sagittarius` (20)
 
 ---
 
@@ -406,15 +445,26 @@ Use this checklist when reviewing sample readings before the first production ba
 
 For each generated reading, verify all of the following:
 
-- [ ] **Planetary opening present** — starts with a planet + aspect + role domain
-- [ ] **Role vocabulary only** — no cross-role contamination (DevOps reading has no wireframes; PM reading has no kubectl)
-- [ ] **Lucky item present and specific** — formatted correctly, value is concrete not abstract
+**Schema:**
+- [ ] **Output is valid JSON** — parses without error; first char is `{`, last char is `}`; no markdown code fences
+- [ ] **Exactly four fields** — `general_reading`, `lucky_value`, `avoid`, `planetary_influence`; no extras, no missing
+
+**Caps:**
+- [ ] **`lucky_value` ≤ 24 chars**
+- [ ] **`avoid` ≤ 50 chars**
+- [ ] **`planetary_influence` ≤ 20 chars**
+
+**Content:**
+- [ ] **Planetary opening present** — `general_reading` starts with `[Planet] [aspect verb] your [role domain] today, [Sign]`
+- [ ] **`general_reading` is 2–3 sentences** — no padding, no truncation; lucky and avoid lines are NOT inside it
+- [ ] **Role vocabulary only** — no cross-role contamination (DevOps has no wireframes; PM has no kubectl)
+- [ ] **`lucky_value` concrete and role-appropriate** — real-domain value, no label inside the value
+- [ ] **`avoid` specific** — callbacks the body or lands as standalone punchline; no `Avoid:` prefix in the value
+- [ ] **`planetary_influence` matches opening** — same planet as the `general_reading` opening; symbol matches the aspect verb (squares→`□`, trines→`△`, conjuncts→`☌`, opposes→`☍`, sextiles→`✶`)
 - [ ] **Tone is dry/deadpan** — not jokey, not winking, not motivational
-- [ ] **Sign personality subtly expressed** — not stated explicitly, but present in the situation described
-- [ ] **Could not apply to a different sign × role** — the reading feels specific, not interchangeable
-- [ ] **Length 3–5 sentences** — no padding, no truncation
+- [ ] **Sign personality subtly expressed** — not stated explicitly, but present in the situation
+- [ ] **Could not apply to a different sign × role** — feels specific, not interchangeable
 - [ ] **No forbidden phrases** — none of the banned generic phrases appear
-- [ ] **Avoid line quality** — if present, it is specific and either callbacks to the body or lands as a standalone punchline; if absent, the reading still lands without it
 
 ### Cross-Batch Checks
 
@@ -438,6 +488,7 @@ If a reading fails a check:
 
 | Version | Date | Change |
 |---------|------|--------|
+| 2.3 | 2026-04-26 | Spec hygiene: rewrote §2.3–2.5 for JSON shape, added §2.6 (`planetary_influence`); refreshed Validation Checklist with schema/cap/content groups; split appendix into v2.x JSON samples (A) and v1.0 legacy prose samples (B); updated canonical reference example to JSON; fixed `Used by:` header reference. |
 | 2.2 | 2026-04-26 | Tightened `avoid` cap from 70 → 50 chars after layout testing showed two-line wraps in the stat column. |
 | 2.1 | 2026-04-26 | Dropped `lucky_label` from JSON spec — card renders a static "LUCKY NAMESPACE" header. Role-noun selection folded into `lucky_value` guidance. Added length caps: lucky_value ≤24, avoid ≤70, planetary_influence ≤20. |
 | 2.0 | 2026-04-26 | Switched output format from prose to structured JSON: general_reading, lucky_label, lucky_value, avoid, planetary_influence. Reader card renders the latter three as stat columns under the body. Legacy prose rows still parse via fallback. |
@@ -446,9 +497,54 @@ If a reading fails a check:
 
 ---
 
-## Appendix: Sample Readings (Validation Batch)
+## Appendix A: Sample Readings (v2.x JSON Format)
 
-The following readings were generated using this style guide at v1.0 and reviewed against the per-reading checklist. All passed. Included as calibration reference.
+These illustrate the current four-field JSON output. Validate against the Section 7 checklist.
+
+### A1. Leo × Software Engineer (caps demonstration)
+
+```json
+{
+  "general_reading": "Saturn squares your code review queue today, Leo. The unsolicited refactor you bundled into Friday's PR will draw exactly the audience you wanted — and ten more LGTM-but-also-consider notes. Defend it with a changelog, not a Slack thread.",
+  "lucky_value": "feat/standing-ovation-pr",
+  "avoid": "Refactors on Friday. The CI is already mad at you.",
+  "planetary_influence": "Saturn □ Sagittarius"
+}
+```
+
+Caps: `lucky_value` 24/24, `avoid` 50/50, `planetary_influence` 20/20. Demonstrates all three caps at exactly the limit. Symbol `□` matches "squares" verb. Leo's performative flair expressed through unsolicited refactor and audience-seeking.
+
+### A2. Scorpio × DevOps Engineer
+
+```json
+{
+  "general_reading": "Saturn squares your on-call rotation today, Scorpio. What looks like a cascading failure is actually a misconfigured alert threshold — trust your gut before you page the team.",
+  "lucky_value": "staging-only",
+  "avoid": "Fridays. Especially this one.",
+  "planetary_influence": "Saturn □ Mars"
+}
+```
+
+Caps: 12/24, 29/50, 13/20. Canonical reference port of the v1.0 sample to JSON. DevOps vocabulary only, Scorpio investigative intensity expressed (trust your gut, don't panic-page).
+
+### A3. Aquarius × UX Designer
+
+```json
+{
+  "general_reading": "Uranus trines your information architecture today, Aquarius. The user flow you proposed in the last design review was correct — the team just hasn't caught up to it yet, and the usability test you're running this week will prove it.",
+  "lucky_value": "exploration-v7",
+  "avoid": "Explaining it again in the sync.",
+  "planetary_influence": "Uranus △ Aquarius"
+}
+```
+
+Caps: 14/24, 32/50, 17/20. Symbol `△` matches "trines". UX vocabulary only (user flow, design review, usability test). Aquarius iconoclasm expressed as "team hasn't caught up yet" without stating the trait.
+
+---
+
+## Appendix B: Legacy Sample Readings (v1.0 Prose Format)
+
+The following readings were generated using this style guide at v1.0 and reviewed against the v1.0 checklist. **Format is no longer current** — they are retained as voice/tone calibration only. The four-field JSON format in Appendix A supersedes the prose form.
 
 ### 1. Scorpio × DevOps Engineer
 > Saturn squares your on-call rotation today, Scorpio. What looks like a cascading failure is actually a misconfigured alert threshold — trust your gut before you page the team. Lucky kubectl namespace: `staging-only`. Avoid: Fridays. Especially this one.

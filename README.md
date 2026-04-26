@@ -191,6 +191,47 @@ Each month you need to generate new readings. Vercel Cron is scheduled to run th
 
 ---
 
+## Validating readings
+
+`scripts/validate-readings.ts` checks rows in the `readings` table against the schema, character caps, and content rules in `docs/prompt-style-guide.md`. Run it after a batch retrieve and before letting the cache flip — it will catch malformed LLM output that would otherwise render to visitors.
+
+### How to run
+
+```bash
+# Validate everything
+pnpm tsx --env-file=.env scripts/validate-readings.ts
+
+# Just one batch
+pnpm tsx --env-file=.env scripts/validate-readings.ts --month 2026-04
+
+# Spot-check a sample
+pnpm tsx --env-file=.env scripts/validate-readings.ts --limit 50
+
+# Show every failure detail
+pnpm tsx --env-file=.env scripts/validate-readings.ts --verbose
+```
+
+**Exit codes:** `0` all pass, `1` any fail, `2` fatal error — usable in CI / pre-deploy gates.
+
+### What it checks
+
+| Check | What fails |
+|---|---|
+| `invalid_sign` / `invalid_role` | Row has a sign/role outside the canonical sets |
+| `json_envelope` / `json_parse` | Content isn't valid strict JSON |
+| `schema_missing` / `schema_extra` / `schema_type` | Wrong fields, extras, or non-string values |
+| `cap_lucky_value` / `cap_avoid` / `cap_planetary_influence` | Field exceeds 24 / 50 / 20 chars |
+| `opening_planet` / `opening_verb` / `opening_sign` | `general_reading` doesn't open with `[Planet] [aspect verb] … [Sign]` |
+| `planet_match` | Planet in `planetary_influence` ≠ planet in opening |
+| `symbol_match` | Aspect symbol doesn't match the verb in the opening |
+| `banned_phrase` | One of the seven banned generic phrases appears in `general_reading` or `avoid` |
+
+### Note about existing data
+
+Rows generated under prompt v1.x (legacy prose format) will all fail under the new validator — that's expected; the validator describes the v2.x JSON contract. Use `--month` to scope to batches generated under the new prompt, or wait until the first new batch lands.
+
+---
+
 ## Running the app locally (for development)
 
 1. Copy the example environment file:
