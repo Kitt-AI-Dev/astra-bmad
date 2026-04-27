@@ -10,9 +10,13 @@ const ROLE_LABELS: Record<string, string> = {
   'qa': 'QA',
   'frontend': 'Frontend',
   'product-manager': 'Product Manager',
+  'project-manager': 'Project Manager',
   'data-scientist': 'Data Scientist',
-  'ux-designer': 'UX Designer',
+  'designer': 'Designer',
   'solutions-architect': 'Solutions Architect',
+  'pr-manager': 'PR Manager',
+  'hr-manager': 'HR Manager',
+  'marketing': 'Marketing',
 }
 
 export function formatSign(slug: string): string {

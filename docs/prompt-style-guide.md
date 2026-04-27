@@ -116,8 +116,12 @@ The specificity is the joke — `staging-only` is funny because a kubectl namesp
 | frontend | CSS property/value, viewport width | `position: relative`, `1280px` |
 | product-manager | story point estimate | `3`, `13`, `?` |
 | data-scientist | random seed, experiment ID, model checkpoint | `42`, `exploration-v3` |
-| ux-designer | Figma frame name | `exploration-v7`, `final-final` |
+| designer | Figma frame name | `exploration-v7`, `final-final` |
 | solutions-architect | cloud region, ADR id, acronym | `us-east-1`, `ADR-0042`, `YAGNI` |
+| project-manager | milestone name or phase | `phase-2`, `go-live`, `UAT` |
+| pr-manager | story angle slug | `exclusive-launch`, `no-comment` |
+| hr-manager | headcount number | `7`, `12`, `+1 req pending` |
+| marketing | UTM source or campaign slug | `utm_source=organic`, `q2-push` |
 
 For software-engineer branch names: use the format `type/something-plausibly-true` (e.g., `fix/not-my-bug`, `feat/actually-a-patch`, `chore/the-real-work`).
 
@@ -262,7 +266,7 @@ The reading body must draw exclusively from the vocabulary of the role it addres
 
 ---
 
-### ux-designer
+### designer
 
 **Domain:** User research, wireframes, prototypes, design systems, handoff, usability
 
@@ -279,6 +283,46 @@ The reading body must draw exclusively from the vocabulary of the role it addres
 **Vocabulary:** architecture diagram, trade-off, scalability, CAP theorem, event-driven, microservices, API contract, cloud region, SLA, HA (high availability), DR (disaster recovery), cost optimization, vendor lock-in, ADR (Architecture Decision Record), throughput, latency, idempotency, eventual consistency
 
 **Reading cues:** the ADR that nobody read, the trade-off that seemed fine six months ago, the service that was supposed to be temporary, the whiteboard diagram that became production reality
+
+---
+
+### project-manager
+
+**Domain:** Project planning, delivery, resource allocation, risk, stakeholder communication, timelines
+
+**Vocabulary:** milestone, deliverable, resource allocation, dependency, critical path, risk register, status report, scope change, timeline, kickoff, RAID log, escalation, stakeholder update, budget, capacity, blockers, project plan, gantt, handover, retrospective
+
+**Reading cues:** the dependency that nobody flagged, the scope change that arrived as a casual Slack message, the milestone that looked fine last week, the status report that nobody reads until something is on fire
+
+---
+
+### pr-manager
+
+**Domain:** Media relations, press releases, messaging, crisis comms, brand narrative, news cycles
+
+**Vocabulary:** press release, media pitch, spokesperson, journalist, embargo, coverage, narrative, crisis comms, on the record, off the record, talking points, quote approval, media list, newsjacking, wire service, headline, story angle, reputation, messaging, news cycle
+
+**Reading cues:** the journalist who got hold of the story early, the embargo that didn't hold, the quote that landed wrong, the statement that needs to not exist yet
+
+---
+
+### hr-manager
+
+**Domain:** Hiring, onboarding, performance management, compensation, org design, culture, compliance
+
+**Vocabulary:** headcount, requisition, onboarding, offboarding, performance review, PIP, leveling, comp band, offer letter, retention, attrition, org chart, culture, engagement survey, policy, grievance, promotion cycle, benefits, hiring manager, candidate pipeline
+
+**Reading cues:** the headcount that got frozen, the performance review that should have happened two quarters ago, the offer that exploded before signing, the attrition number that arrived on a Monday
+
+---
+
+### marketing
+
+**Domain:** Campaigns, growth, content, brand, demand generation, metrics, distribution
+
+**Vocabulary:** campaign, conversion rate, CTR, funnel, CAC, LTV, attribution, A/B test, copy, landing page, SEO, organic, paid, impression, click-through, content calendar, brand voice, persona, retargeting, lead gen, pipeline, MQL, SQL, UTM, ROAS
+
+**Reading cues:** the campaign that launched into a news cycle it didn't expect, the A/B test where both variants lost, the attribution model that made everything look fine until it didn't, the organic spike nobody can explain
 
 ---
 
@@ -381,7 +425,7 @@ Field guidance:
 - general_reading — 2 to 3 sentences total. Open with: [Planet] [aspect] your [role-relevant domain] today, [Sign]. Then situation → insight → guidance. Stay strictly in the role's vocabulary. Weave in the month context subtly. No padding. Do NOT include the lucky item line or the avoid line here.
   Valid aspect verbs: squares (tension), trines (flow), conjuncts (amplification), opposes (conflict), sextiles (opportunity requiring action).
 
-- lucky_value — a concrete, role-specific token formatted as it would actually appear in that domain. The card displays this under a static "LUCKY NAMESPACE" header — do not include any label in the value. Pick a value type appropriate to {role_label}: Software Engineer → branch name; DevOps → kubectl namespace or cluster name; QA → test environment; Frontend → CSS property/value; Product Manager → story point estimate; Data Scientist → random seed or experiment ID; UX Designer → Figma frame name; Solutions Architect → cloud region. Examples: "fix/not-my-bug", "staging-only", "qa-blue", "position: relative", "3", "42", "exploration-v3", "us-east-1". One short token or phrase, MAX 24 characters. No prose.
+- lucky_value — a concrete, role-specific token formatted as it would actually appear in that domain. The card displays this under a static "LUCKY NAMESPACE" header — do not include any label in the value. Pick a value type appropriate to {role_label}: Software Engineer → branch name; DevOps → kubectl namespace or cluster name; QA → test environment; Frontend → CSS property/value; Product Manager → story point estimate; Project Manager → milestone name or phase; Data Scientist → random seed or experiment ID; Designer → Figma frame name; Solutions Architect → cloud region or ADR id; PR Manager → story angle slug; HR Manager → headcount number; Marketing Manager → UTM source or campaign slug. Examples: "fix/not-my-bug", "staging-only", "qa-blue", "position: relative", "3", "phase-2", "42", "exploration-v3", "us-east-1", "exclusive-launch", "7", "utm_source=organic". One short token or phrase, MAX 24 characters. No prose.
 
 - avoid — what to avoid today. One specific thing, optionally followed by a callback punchline. MAX 50 characters total. Examples: "Fridays. Especially this one." (29 chars), "Merging to main before the CI logs load." (40), "The estimation meeting. It already knows." (41).
 
@@ -410,9 +454,13 @@ const ROLE_LABELS: Record<Role, string> = {
   'qa': 'QA Engineer',
   'frontend': 'Frontend Engineer',
   'product-manager': 'Product Manager',
+  'project-manager': 'Project Manager',
   'data-scientist': 'Data Scientist',
-  'ux-designer': 'UX Designer',
+  'designer': 'Designer',
   'solutions-architect': 'Solutions Architect',
+  'pr-manager': 'PR Manager',
+  'hr-manager': 'HR Manager',
+  'marketing': 'Marketing Manager',
 }
 ```
 
@@ -527,7 +575,7 @@ Caps: `lucky_value` 24/24, `avoid` 50/50, `planetary_influence` 20/20. Demonstra
 
 Caps: 12/24, 29/50, 13/20. Canonical reference port of the v1.0 sample to JSON. DevOps vocabulary only, Scorpio investigative intensity expressed (trust your gut, don't panic-page).
 
-### A3. Aquarius × UX Designer
+### A3. Aquarius × Designer
 
 ```json
 {
@@ -581,10 +629,10 @@ The following readings were generated using this style guide at v1.0 and reviewe
 
 *Checklist:* ✅ planetary opening, ✅ FE vocabulary only (component library, animation, design spec, Lighthouse), ✅ lucky CSS property beautifully specific, ✅ dry tone, ✅ Leo's performative flair expressed (unsolicited beauty, will defend it), ✅ sign × role specific
 
-### 8. Aquarius × UX Designer
+### 8. Aquarius × Designer
 > Uranus trines your information architecture today, Aquarius. The user flow you proposed in the last design review was correct — the team just hasn't caught up to it yet, and the usability test you're running this week will prove it. Lucky Figma frame: `exploration-v7`. Avoid: explaining it again in the sync. Let the test speak.
 
-*Checklist:* ✅ planetary opening, ✅ UX vocabulary only (user flow, design review, usability test, Figma frame), ✅ lucky frame specific, ✅ dry tone, ✅ Aquarius' iconoclastic "team hasn't caught up" energy, ✅ sign × role specific
+*Checklist:* ✅ planetary opening, ✅ Designer vocabulary only (user flow, design review, usability test, Figma frame), ✅ lucky frame specific, ✅ dry tone, ✅ Aquarius' iconoclastic "team hasn't caught up" energy, ✅ sign × role specific
 
 ### 9. Libra × Solutions Architect
 > Venus squares your architecture diagram today, Libra. You've been in the trade-off analysis for this service mesh decision for eleven days, and both options are still equally valid — they were equally valid on day one. Lucky acronym: `YAGNI`. Avoid: scheduling another review to decide if you should schedule a review.
