@@ -10,7 +10,7 @@ import { Header } from '@/components/Header'
 import { formatSign, formatRole } from '@/lib/format'
 
 export const dynamicParams = true
-export const revalidate = 3600
+export const revalidate = false
 
 export async function generateMetadata({
   params,
