@@ -92,6 +92,10 @@ export default async function DatePage({
   }
 
   const today = new Date().toISOString().slice(0, 10)
+  // Mirror the RLS policy in 0002_publish_gate_local_timezone.sql: allow up to
+  // tomorrow-UTC so positive-offset readers (CEST, JST, AEST...) see their
+  // local-date reading at local midnight, not UTC midnight.
+  const maxDate = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
   const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://404tune.app'
 
   let reading = null
@@ -104,7 +108,7 @@ export default async function DatePage({
       .eq('role', role)
       .eq('date', date)
       .eq('suppressed', false)
-      .lte('date', today)
+      .lte('date', maxDate)
       .maybeSingle()
     if (error) console.error('[readings] Supabase error:', error)
     reading = data
