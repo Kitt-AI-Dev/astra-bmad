@@ -101,11 +101,12 @@ export default async function SignRolePage({
         <p className="text-[13px] font-mono text-accent-gold mb-5">
           {'$ '}<span className="text-accent-violet">404tune</span>{` --sign ${sign} --role ${role} --date ${today}`}
         </p>
-        <DateGuard serverDate={today} sign={sign} role={role} />
-        <div className="animate-in fade-in duration-150">
-          <ReadingCard reading={reading} nullVariant="not-published" />
-          {reading && <ShareFooter url={`${base}/${sign}/${role}/${reading.date}`} changeHref="/?change=1" />}
-        </div>
+        <DateGuard serverDate={today} sign={sign} role={role}>
+          <div className="animate-in fade-in duration-150">
+            <ReadingCard reading={reading} nullVariant="not-published" />
+            {reading && <ShareFooter url={`${base}/${sign}/${role}/${reading.date}`} changeHref="/?change=1" />}
+          </div>
+        </DateGuard>
       </div>
     </main>
   )

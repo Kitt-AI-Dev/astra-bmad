@@ -32,7 +32,7 @@ export default async function Image({
   if (SIGNS.includes(sign as Sign) && ROLES.includes(role as Role)) {
     try {
       const supabase = createPublicClient()
-      const today = new Date().toISOString().slice(0, 10)
+      const maxDate = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
       const { data } = await supabase
         .from('readings')
         .select('content')
@@ -40,7 +40,7 @@ export default async function Image({
         .eq('role', role)
         .eq('date', date)
         .eq('suppressed', false)
-        .lte('date', today)
+        .lte('date', maxDate)
         .maybeSingle()
       if (data?.content) {
         excerpt = data.content.slice(0, 200)
