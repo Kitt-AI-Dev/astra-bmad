@@ -5,10 +5,14 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase-server'
 import {
   parseCustomId,
+  parseTeamCustomId,
   buildCustomId,
+  buildTeamCustomId,
   buildPrompt,
+  buildTeamPrompt,
   getMonthTheme,
   type BatchRequest,
+  type TeamReadingRow,
 } from '@/scripts/batch-utils'
 
 type BatchRow = {
@@ -133,27 +137,39 @@ export async function runBatchRetrieve(): Promise<void> {
     }
 
     const readings: ReadingRow[] = []
+    const teamReadings: TeamReadingRow[] = []
     const errorIds: string[] = []
 
     for await (const result of await anthropic.beta.messages.batches.results(
       batch.anthropic_batch_id
     )) {
       if (result.result.type === 'succeeded') {
-        const { sign, role, date } = parseCustomId(result.custom_id)
         const contentBlock = result.result.message.content[0]
-        if (contentBlock?.type === 'text') {
-          readings.push({
-            sign,
-            role,
-            date,
-            content: contentBlock.text,
-            batch_month: batch.batch_month,
-          })
+
+        if (result.custom_id.startsWith('team-')) {
+          const { date, slot } = parseTeamCustomId(result.custom_id)
+          if (contentBlock?.type === 'text') {
+            teamReadings.push({ date, slot, content: contentBlock.text, batch_id: batch.id })
+          } else {
+            errorIds.push(result.custom_id)
+            console.error(`[batch-retrieve] team reading succeeded but no text: ${result.custom_id}`)
+          }
         } else {
-          errorIds.push(result.custom_id)
-          console.error(
-            `[batch-retrieve] succeeded but no text content: ${result.custom_id}`
-          )
+          const { sign, role, date } = parseCustomId(result.custom_id)
+          if (contentBlock?.type === 'text') {
+            readings.push({
+              sign,
+              role,
+              date,
+              content: contentBlock.text,
+              batch_month: batch.batch_month,
+            })
+          } else {
+            errorIds.push(result.custom_id)
+            console.error(
+              `[batch-retrieve] succeeded but no text content: ${result.custom_id}`
+            )
+          }
         }
       } else {
         errorIds.push(result.custom_id)
@@ -164,7 +180,7 @@ export async function runBatchRetrieve(): Promise<void> {
     }
 
     console.log(
-      `[batch-retrieve] Batch ${batch.anthropic_batch_id}: ${readings.length} succeeded, ${errorIds.length} errored`
+      `[batch-retrieve] Batch ${batch.anthropic_batch_id}: ${readings.length + teamReadings.length} succeeded (${readings.length} individual, ${teamReadings.length} team), ${errorIds.length} errored`
     )
 
     if (readings.length > 0) {
@@ -181,9 +197,23 @@ export async function runBatchRetrieve(): Promise<void> {
       const affected = new Set<string>()
       for (const r of readings) affected.add(`${r.sign}/${r.role}`)
       for (const path of affected) revalidatePath(`/${path}`)
+      for (const r of readings) revalidatePath(`/${r.sign}/${r.role}/${r.date}`)
     }
 
-    totalSucceeded += readings.length
+    if (teamReadings.length > 0) {
+      const { error: teamInsertErr } = await supabase.from('team_readings').upsert(teamReadings, {
+        onConflict: 'date,slot',
+      })
+      if (teamInsertErr) {
+        throw new Error(
+          `Failed to upsert team_readings for batch ${batch.anthropic_batch_id}: ${teamInsertErr.message}`
+        )
+      }
+      console.log(`[batch-retrieve] Upserted ${teamReadings.length} team readings`)
+      // No revalidatePath — new rows have no cached page entries yet
+    }
+
+    totalSucceeded += readings.length + teamReadings.length
     totalErrored += errorIds.length
     if (!batchMonths.includes(batch.batch_month)) batchMonths.push(batch.batch_month)
     perMonthErrors[batch.batch_month] = (perMonthErrors[batch.batch_month] ?? 0) + errorIds.length
@@ -193,15 +223,27 @@ export async function runBatchRetrieve(): Promise<void> {
       const retryRequests: BatchRequest[] = []
       for (const customId of errorIds) {
         try {
-          const { sign, role, date } = parseCustomId(customId)
-          retryRequests.push({
-            custom_id: buildCustomId(sign, role, date),
-            params: {
-              model: 'claude-haiku-4-5-20251001',
-              max_tokens: 400,
-              messages: [{ role: 'user', content: buildPrompt(sign, role, date, monthTheme) }],
-            },
-          })
+          if (customId.startsWith('team-')) {
+            const { date, slot } = parseTeamCustomId(customId)
+            retryRequests.push({
+              custom_id: buildTeamCustomId(date, slot),
+              params: {
+                model: 'claude-haiku-4-5-20251001',
+                max_tokens: 500,
+                messages: [{ role: 'user', content: buildTeamPrompt(date, slot, monthTheme) }],
+              },
+            })
+          } else {
+            const { sign, role, date } = parseCustomId(customId)
+            retryRequests.push({
+              custom_id: buildCustomId(sign, role, date),
+              params: {
+                model: 'claude-haiku-4-5-20251001',
+                max_tokens: 300,
+                messages: [{ role: 'user', content: buildPrompt(sign, role, date, monthTheme) }],
+              },
+            })
+          }
         } catch (parseErr) {
           console.error(
             `[batch-retrieve] Could not rebuild prompt for malformed custom_id "${customId}":`,
@@ -239,7 +281,7 @@ export async function runBatchRetrieve(): Promise<void> {
       .from('batches')
       .update({
         status: 'processed',
-        succeeded: readings.length,
+        succeeded: readings.length + teamReadings.length,
         errored: errorIds.length,
         completed_at: new Date().toISOString(),
       })

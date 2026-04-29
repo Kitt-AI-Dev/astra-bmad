@@ -1,9 +1,11 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 
 import { createClient } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
 import { MonthSelector } from '@/components/admin/MonthSelector'
+import { DateFilter } from '@/components/admin/DateFilter'
 import {
   Table,
   TableBody,
@@ -13,6 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { GenerateReadingPanel } from '@/components/admin/GenerateReadingPanel'
 
 type Status = 'published' | 'suppressed' | 'scheduled'
 
@@ -35,9 +38,9 @@ const BADGE_VARIANT: Record<Status, 'default' | 'destructive' | 'secondary'> = {
 export default async function ReadingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>
+  searchParams: Promise<{ month?: string; date?: string }>
 }) {
-  const { month } = await searchParams
+  const { month, date } = await searchParams
   const currentMonth = getCurrentMonth()
 
   const supabase = await createClient()
@@ -57,13 +60,24 @@ export default async function ReadingsPage({
   ].sort((a, b) => b.localeCompare(a))
   if (!allMonths.includes(currentMonth)) allMonths.unshift(currentMonth)
 
-  // Validate month param against known months; fall back to current month
-  const selectedMonth = month && allMonths.includes(month) ? month : currentMonth
+  const selectedDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined
 
-  const { data: readings, error: readingsError } = await supabase
+  // When date is set, derive month from date (date is source of truth)
+  const selectedMonth = selectedDate
+    ? selectedDate.slice(0, 7)
+    : (month && allMonths.includes(month) ? month : currentMonth)
+
+  let readingsQuery = supabase
     .from('readings')
     .select('id, sign, role, date, content, suppressed')
-    .eq('batch_month', selectedMonth)
+
+  if (selectedDate) {
+    readingsQuery = readingsQuery.eq('date', selectedDate)
+  } else {
+    readingsQuery = readingsQuery.eq('batch_month', selectedMonth)
+  }
+
+  const { data: readings, error: readingsError } = await readingsQuery
     .order('date', { ascending: true })
     .order('sign', { ascending: true })
     .order('role', { ascending: true })
@@ -77,6 +91,7 @@ export default async function ReadingsPage({
       <div className="flex items-center gap-4">
         <p className="text-text-secondary text-sm font-mono">{'// readings'}</p>
         <MonthSelector months={allMonths} current={selectedMonth} />
+        <Suspense fallback={null}><DateFilter /></Suspense>
       </div>
 
       {readingsError ? (
@@ -128,6 +143,11 @@ export default async function ReadingsPage({
             })}
           </TableBody>
         </Table>
+      )}
+      {selectedDate && (
+        <Suspense fallback={null}>
+          <GenerateReadingPanel date={selectedDate} />
+        </Suspense>
       )}
     </div>
   )

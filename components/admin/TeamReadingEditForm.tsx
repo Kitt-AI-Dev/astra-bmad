@@ -11,19 +11,18 @@ type Props = {
   initialContent: string
   initialSuppressed: boolean
   isLive: boolean
-  sign: string
-  role: string
+  slot: number
   date: string
 }
 
-export function ReadingEditForm({ id, initialContent, initialSuppressed, isLive, sign, role, date }: Props) {
+export function TeamReadingEditForm({ id, initialContent, initialSuppressed, isLive, slot, date }: Props) {
   const [content, setContent] = useState(initialContent)
   const [suppressed, setSuppressed] = useState(initialSuppressed)
   const [saving, setSaving] = useState(false)
   const [revalidating, setRevalidating] = useState(false)
 
   async function patchReading(updates: { content?: string; suppressed?: boolean }) {
-    const res = await fetch(`/api/admin/readings/${id}`, {
+    const res = await fetch(`/api/admin/team-readings/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
@@ -48,7 +47,7 @@ export function ReadingEditForm({ id, initialContent, initialSuppressed, isLive,
   async function handleRevalidate() {
     setRevalidating(true)
     try {
-      const res = await fetch(`/api/admin/readings/${id}/revalidate`, { method: 'POST' })
+      const res = await fetch(`/api/admin/team-readings/${id}/revalidate`, { method: 'POST' })
       if (!res.ok) throw new Error(`Request failed (${res.status})`)
       toast.success('cache cleared — next visit renders fresh', { duration: 3000 })
     } catch {
@@ -103,9 +102,8 @@ export function ReadingEditForm({ id, initialContent, initialSuppressed, isLive,
           {revalidating ? 'clearing...' : 'revalidate cache'}
         </Button>
         <GenerateButton
-          type="individual"
-          sign={sign}
-          role={role}
+          type="team"
+          slot={slot}
           date={date}
           onSuccess={(c) => setContent(c)}
         />

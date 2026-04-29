@@ -1,5 +1,5 @@
 import type Anthropic from '@anthropic-ai/sdk'
-import { SIGNS } from '../lib/constants'
+import { SIGNS, TEAM_ARCHETYPES } from '../lib/constants'
 import type { Sign, Role } from '../lib/constants'
 
 // ---------------------------------------------------------------------------
@@ -180,4 +180,65 @@ export function getMonthTheme(batchMonth: string): string {
   if (process.env.BATCH_MONTH_THEME) return process.env.BATCH_MONTH_THEME
   const month = parseInt(batchMonth.split('-')[1], 10)
   return SEASONAL_THEMES[month] ?? 'Mid-year execution phase.'
+}
+
+// ---------------------------------------------------------------------------
+// Team reading helpers
+// ---------------------------------------------------------------------------
+
+export type TeamReadingRow = {
+  date: string
+  slot: number
+  content: string
+  batch_id: string
+}
+
+export function buildTeamCustomId(date: string, slot: number): string {
+  return `team-${date}-${slot}`
+  // e.g. 'team-2026-05-01-3'
+}
+
+// Format: 'team-YYYY-MM-DD-{slot}'
+// 'team-' = 5 chars, date = positions 5–14 (10 chars), '-' at 15, slot = rest.
+// Never split on '-' naively — date itself contains hyphens.
+export function parseTeamCustomId(customId: string): { date: string; slot: number } {
+  const date = customId.slice(5, 15)
+  const slot = parseInt(customId.slice(16), 10)
+  if (!date || isNaN(slot) || slot < 1 || slot > 12) {
+    throw new Error(`parseTeamCustomId: malformed custom_id "${customId}"`)
+  }
+  return { date, slot }
+}
+
+const TEAM_PROMPT_TEMPLATE = `You are writing a daily team horoscope for 404tune — a site where software teams check their collective reading for the day.
+
+Tone: Dry, deadpan, technically literate. Played completely straight. Role call-outs are observations, not jokes. Specific is funny; generic is not.
+
+Team archetype: {team_archetype}
+Date: {date}
+Month context: {month_theme}
+
+Write the reading in this exact markdown format (no deviations):
+
+## {team_archetype}
+
+{2–3 sentences of team forecast for the day. Ground it in the archetype's energy. Be specific.}
+
+**QA will** {one sentence — a specific QA-flavored prediction}
+**PM will** {one sentence — a specific PM-flavored prediction}
+**Dev will** {one sentence — a specific Dev-flavored prediction}
+**Designer will** {one sentence — a specific Designer-flavored prediction}
+
+**Lucky move:** {one concrete action for the team today}
+**Avoid:** {one specific thing the team should not do today}
+
+Output the markdown block only. No preamble. No explanation. Start with ## and end with the Avoid line.`
+
+export function buildTeamPrompt(date: string, slot: number, monthTheme: string): string {
+  const archetype = TEAM_ARCHETYPES[slot]
+  if (!archetype) throw new Error(`buildTeamPrompt: unknown slot ${slot}`)
+  return TEAM_PROMPT_TEMPLATE
+    .replace(/{team_archetype}/g, archetype)
+    .replace(/{date}/g, date)
+    .replace(/{month_theme}/g, monthTheme)
 }

@@ -17,6 +17,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         >
           {'// batches'}
         </Link>
+        <Link
+          href="/admin/team-readings"
+          className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+        >
+          {'// team readings'}
+        </Link>
       </nav>
       <main className="p-6">{children}</main>
       <Toaster position="bottom-right" />

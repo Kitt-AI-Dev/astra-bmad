@@ -2,7 +2,15 @@ import Anthropic from '@anthropic-ai/sdk'
 import * as Sentry from '@sentry/nextjs'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
-import { parseCustomId, buildPrompt, getMonthTheme } from '@/scripts/batch-utils'
+import {
+  parseCustomId,
+  parseTeamCustomId,
+  buildCustomId,
+  buildTeamCustomId,
+  buildPrompt,
+  buildTeamPrompt,
+  getMonthTheme,
+} from '@/scripts/batch-utils'
 import type { BatchRequest } from '@/scripts/batch-utils'
 
 export async function POST(request: Request) {
@@ -54,17 +62,30 @@ export async function POST(request: Request) {
 
     // 3. Reconstruct requests from custom_ids
     const monthTheme = getMonthTheme(batch.batch_month)
-    const requests: BatchRequest[] = erroredIds.map((customId) => {
-      const { sign, role, date } = parseCustomId(customId)
-      return {
-        custom_id: customId,
-        params: {
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 300,
-          messages: [{ role: 'user', content: buildPrompt(sign, role, date, monthTheme) }],
-        },
+    const requests: BatchRequest[] = []
+    for (const customId of erroredIds) {
+      if (customId.startsWith('team-')) {
+        const { date, slot } = parseTeamCustomId(customId)
+        requests.push({
+          custom_id: buildTeamCustomId(date, slot),
+          params: {
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 500,
+            messages: [{ role: 'user', content: buildTeamPrompt(date, slot, monthTheme) }],
+          },
+        })
+      } else {
+        const { sign, role, date } = parseCustomId(customId)
+        requests.push({
+          custom_id: buildCustomId(sign, role, date),
+          params: {
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 300,
+            messages: [{ role: 'user', content: buildPrompt(sign, role, date, monthTheme) }],
+          },
+        })
       }
-    })
+    }
 
     // 4. Submit retry batch to Anthropic
     const retryBatch = await anthropic.beta.messages.batches.create({ requests })

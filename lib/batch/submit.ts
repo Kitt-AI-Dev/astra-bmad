@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase-server'
 import {
   buildCustomId,
   buildPrompt,
+  buildTeamCustomId,
+  buildTeamPrompt,
   getMonthTheme,
   type BatchRequest,
 } from '@/scripts/batch-utils'
@@ -73,8 +75,23 @@ export async function runBatchSubmit(batchMonth: string): Promise<void> {
     }
   }
 
+  // Team readings: 12 slots × days-in-month
+  for (const date of dates) {
+    for (let slot = 1; slot <= 12; slot++) {
+      requests.push({
+        custom_id: buildTeamCustomId(date, slot),
+        params: {
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 500,
+          messages: [{ role: 'user', content: buildTeamPrompt(date, slot, monthTheme) }],
+        },
+      })
+    }
+  }
+
   console.log(
-    `[batch-submit] Built ${requests.length} requests (${SIGNS.length} signs × ${ROLES.length} roles × ${dates.length} days)`
+    `[batch-submit] Built ${requests.length} requests: ` +
+    `${SIGNS.length}×${ROLES.length}×${dates.length} individual + 12×${dates.length} team`
   )
 
   const anthropic = new Anthropic({ apiKey: anthropicKey })

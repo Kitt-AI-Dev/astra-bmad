@@ -1,7 +1,7 @@
 # 404tune Prompt Style Guide
 
-**Version:** 2.3  
-**Last updated:** 2026-04-26  
+**Version:** 2.4  
+**Last updated:** 2026-04-29  
 **Governs:** All reading generation via the Anthropic Batch API  
 **Used by:** `scripts/batch-utils.ts` (canonical prompt template; consumed by `lib/batch/submit.ts` and `lib/batch/retrieve.ts`)
 
@@ -643,3 +643,84 @@ The following readings were generated using this style guide at v1.0 and reviewe
 > Saturn conjuncts your infrastructure today, Taurus. The Kubernetes migration that's been on the roadmap for fourteen months is being prioritized again, and once again you will explain, patiently, that the current setup has a 99.97% uptime and the blast radius of changing it is not worth the rollback risk. Lucky Terraform workspace: `production-legacy`. Avoid: the architecture meeting. They already know your position.
 
 *Checklist:* ✅ planetary opening, ✅ DevOps vocabulary only (Kubernetes, Terraform workspace, uptime, rollback risk), ✅ lucky workspace both specific and comedically perfect ("production-legacy"), ✅ dry tone, ✅ Taurus' stubbornness and comfort-seeking expressed as principled resistance, ✅ sign × role specific
+
+
+---
+
+## Section 6: Team Reading Prompt
+
+### 6.1 Overview
+
+Team readings are generated alongside individual readings in the same monthly Anthropic batch. There are 12 team readings per day — one per **slot** — each anchored to a fixed team archetype. The archetype is the primary variation signal that makes each slot meaningfully distinct.
+
+Team readings do **not** target a specific zodiac sign or individual role. Instead, they address the team as a collective, with role-specific nods ("QA will...", "PM will...") that land as dry observations, not targeted predictions.
+
+### 6.2 Archetype Table
+
+| Slot | Archetype | Energy |
+|------|-----------|--------|
+| 1 | The Crunch Team | Deadline pressure, shipping fever |
+| 2 | The Alignment-Seekers | Endless meetings, slide decks |
+| 3 | The Fire-Fighters | Production incidents, on-call anxiety |
+| 4 | The Dreamers | Roadmap vision, moonshot energy |
+| 5 | The Nitpickers | Code review wars, standards debates |
+| 6 | The Overloaded | Too many priorities, context-switching chaos |
+| 7 | The Collaborators | Cross-team dependencies, Slack ping storms |
+| 8 | The Slow Burners | Tech debt reckoning, refactor season |
+| 9 | The Grinders | Sprint velocity obsession, story point drama |
+| 10 | The Pivoteers | Strategy shift, everything changes again |
+| 11 | The New Joiners | Onboarding chaos, "just ask anyone" |
+| 12 | The Survivors | Post-launch calm, retro season |
+
+### 6.3 Prompt Template
+
+```
+You are writing a daily team horoscope for 404tune — a site where software teams check their collective reading for the day.
+
+Tone: Dry, deadpan, technically literate. Played completely straight. Role call-outs are observations, not jokes. Specific is funny; generic is not.
+
+Team archetype: {team_archetype}
+Date: {date}
+Month context: {month_theme}
+
+Write the reading in this exact markdown format (no deviations):
+
+## {team_archetype}
+
+{2–3 sentences of team forecast for the day. Ground it in the archetype's energy. Be specific.}
+
+**QA will** {one sentence — a specific QA-flavored prediction}
+**PM will** {one sentence — a specific PM-flavored prediction}
+**Dev will** {one sentence — a specific Dev-flavored prediction}
+**Designer will** {one sentence — a specific Designer-flavored prediction}
+
+**Lucky move:** {one concrete action for the team today}
+**Avoid:** {one specific thing the team should not do today}
+
+Output the markdown block only. No preamble. No explanation. Start with ## and end with the Avoid line.
+```
+
+### 6.4 Content Guidance
+
+- **Archetype energy is the frame** — every sentence should feel grounded in the archetype's situation. The Crunch Team is sweating a deadline; The Alignment-Seekers are stuck in a meeting about the meeting.
+- **Role nods are observations, not horoscope predictions** — "QA will surface a critical bug just before the meeting" reads as a knowing observation, not a cosmic forecast. Keep them deadpan.
+- **Specific beats generic** — "PM will reprioritize three stories from Done to In Progress" is funny. "PM will face challenges" is not.
+- **Lucky move is team-level** — something the whole team can act on, not individual advice. "Run the postmortem before Friday" or "merge the branch everyone is afraid to touch."
+- **Avoid is a shared team trap** — "The status update Slack thread. It has already started." or "The emergency standup. The fire is already out."
+- **max_tokens: 500** — the structured format is longer than individual readings (400). Do not reduce.
+
+### 6.5 Sample Output
+
+```markdown
+## The Fire-Fighters
+
+Saturn squares your on-call rotation today. The incident from last Tuesday was resolved, postmortem written, action items assigned — and yet the alert that triggered it is firing again. The runbook was updated for the scenario that happened, not the one that is happening now.
+
+**QA will** find a second reproduction path that makes the blast radius larger than first reported.
+**PM will** ask if this affects the release date while the incident channel is still active.
+**Dev will** fix the symptom first and the root cause after the retrospective.
+**Designer will** not be involved but will be asked to update the status page banner.
+
+**Lucky move:** Write the postmortem before the fix. It focuses the diagnosis.
+**Avoid:** The "quick call" to align on scope. It is not quick and the scope is already decided.
+```

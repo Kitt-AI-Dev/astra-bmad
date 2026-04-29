@@ -12,13 +12,15 @@ import {
 export function MonthSelector({
   months,
   current,
+  basePath = '/admin/readings',
 }: {
   months: string[]
   current: string
+  basePath?: string
 }) {
   const router = useRouter()
   return (
-    <Select value={current} onValueChange={(v) => router.push(`/admin/readings?month=${v}`)}>
+    <Select value={current} onValueChange={(v) => router.push(`${basePath}?month=${v}`)}>
       <SelectTrigger className="w-36 border-border bg-surface font-mono text-sm">
         <SelectValue />
       </SelectTrigger>
