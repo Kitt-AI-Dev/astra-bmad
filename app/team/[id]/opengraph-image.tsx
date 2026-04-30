@@ -37,10 +37,17 @@ export default async function Image({
     if (data) {
       const archetype = TEAM_ARCHETYPES[data.slot]
       if (archetype) headline = `## ${archetype}`
-      const firstParagraph = data.content
-        .split('\n\n')
-        .find((b: string) => b.trim() && !b.trim().startsWith('#') && !b.trim().startsWith('**'))
-      excerpt = firstParagraph?.slice(0, 200) ?? null
+      try {
+        const parsed = JSON.parse(data.content)
+        if (typeof parsed?.heading === 'string' && typeof parsed?.body === 'string') {
+          excerpt = parsed.body.slice(0, 200)
+        }
+      } catch {
+        const firstParagraph = data.content
+          .split('\n\n')
+          .find((b: string) => b.trim() && !b.trim().startsWith('#') && !b.trim().startsWith('**'))
+        excerpt = firstParagraph?.slice(0, 200) ?? null
+      }
     }
   } catch (err) {
     console.warn('[og/team] DB fetch failed:', err)

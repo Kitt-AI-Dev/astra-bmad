@@ -34,7 +34,16 @@ export async function generateMetadata({
       .eq('suppressed', false)
       .maybeSingle()
     if (data?.content) {
-      description = data.content.slice(0, 150) + '…'
+      try {
+        const parsed = JSON.parse(data.content)
+        if (typeof parsed?.general_reading === 'string') {
+          description = parsed.general_reading.slice(0, 150) + '…'
+        } else {
+          description = data.content.slice(0, 150) + '…'
+        }
+      } catch {
+        description = data.content.slice(0, 150) + '…'
+      }
     }
   } catch (err) {
     console.warn('[generateMetadata] description fetch failed:', err)

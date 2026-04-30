@@ -1,4 +1,5 @@
 import type { Sign, Role } from '@/lib/constants'
+import { SectionComment, MetricBar, MiniStat, CursedCommit } from './reading-sections'
 
 export type Reading = {
   id: string
@@ -11,6 +12,22 @@ export type Reading = {
 type ReadingCardProps = {
   reading: Reading | null
   nullVariant?: 'not-published' | 'unavailable'
+}
+
+type ParsedContent = {
+  body: string
+  isLegacy: boolean
+  metrics?: {
+    deployLuck: number
+    deployLuckNote: string
+    bugRiskIndex: number
+    bugRiskNote: string
+    sprintEnergy: number
+    sprintEnergyNote: string
+  }
+  avoid?: string
+  coffeeRequirement?: number
+  cursedCommit?: string
 }
 
 function escapeControlsInsideStrings(s: string): string {
@@ -61,7 +78,7 @@ function tryParseStructured(input: string): {
   }
 }
 
-function parseContent(content: string): { body: string; stats: { label: string; value: string }[] } {
+function parseContent(content: string): ParsedContent {
   const trimmed = content.trim()
   const stripped = trimmed
     .replace(/^```(?:json)?\s*\n?/i, '')
@@ -69,34 +86,49 @@ function parseContent(content: string): { body: string; stats: { label: string; 
 
   if (stripped.startsWith('{')) {
     const parsed = tryParseStructured(stripped)
-    if (parsed && typeof parsed.general_reading === 'string') {
-      const stats: { label: string; value: string }[] = []
-      if (typeof parsed.lucky_value === 'string' && parsed.lucky_value.length > 0) {
-        stats.push({ label: 'Lucky namespace', value: parsed.lucky_value })
+    if (parsed === null) {
+      return { body: content, isLegacy: true }
+    }
+    if (typeof parsed.general_reading === 'string') {
+      const body = parsed.general_reading.replace(/\s+/g, ' ').trim()
+      const raw = parsed as Record<string, unknown>
+
+      if (raw.lucky_value !== undefined || raw.planetary_influence !== undefined) {
+        return { body, isLegacy: true }
       }
-      if (typeof parsed.avoid === 'string' && parsed.avoid.length > 0) {
-        stats.push({ label: 'Avoid', value: parsed.avoid })
+
+      if (
+        typeof raw.deploy_luck === 'number' &&
+        typeof raw.bug_risk_index === 'number' &&
+        typeof raw.sprint_energy === 'number'
+      ) {
+        return {
+          body,
+          isLegacy: false,
+          metrics: {
+            deployLuck: raw.deploy_luck,
+            deployLuckNote: typeof raw.deploy_luck_note === 'string' ? raw.deploy_luck_note : '',
+            bugRiskIndex: raw.bug_risk_index,
+            bugRiskNote: typeof raw.bug_risk_note === 'string' ? raw.bug_risk_note : '',
+            sprintEnergy: raw.sprint_energy,
+            sprintEnergyNote: typeof raw.sprint_energy_note === 'string' ? raw.sprint_energy_note : '',
+          },
+          avoid: typeof raw.avoid === 'string' ? raw.avoid : undefined,
+          coffeeRequirement: typeof raw.coffee_requirement === 'number' ? raw.coffee_requirement : undefined,
+          cursedCommit: typeof raw.cursed_commit === 'string' ? raw.cursed_commit : undefined,
+        }
       }
-      if (typeof parsed.planetary_influence === 'string' && parsed.planetary_influence.length > 0) {
-        stats.push({ label: 'Planetary influence', value: parsed.planetary_influence })
-      }
-      return { body: parsed.general_reading.replace(/\s+/g, ' ').trim(), stats }
+
+      return { body, isLegacy: true }
+    } else {
+      // JSON parsed but no general_reading — unknown shape; suppress raw JSON
+      return { body: '', isLegacy: true }
     }
   }
 
   const sep = content.indexOf('\n\n---\n')
-  if (sep === -1) return { body: content, stats: [] }
-  const body = content.slice(0, sep)
-  const statsSection = content.slice(sep + 6).trim()
-  const stats = statsSection
-    .split('\n')
-    .map((line) => {
-      const idx = line.indexOf(': ')
-      if (idx === -1) return null
-      return { label: line.slice(0, idx), value: line.slice(idx + 2) }
-    })
-    .filter((s): s is { label: string; value: string } => s !== null)
-  return { body, stats }
+  if (sep === -1) return { body: content, isLegacy: true }
+  return { body: content.slice(0, sep), isLegacy: true }
 }
 
 function renderBody(body: string): React.ReactNode {
@@ -129,23 +161,33 @@ export function ReadingCard({ reading, nullVariant = 'not-published' }: ReadingC
     )
   }
 
-  const { body, stats } = parseContent(reading.content)
+  const { body, isLegacy, metrics, avoid, coffeeRequirement, cursedCommit } = parseContent(reading.content)
 
   return (
     <div aria-live="polite">
       <article className="border border-border rounded-lg p-4 bg-surface">
+        <SectionComment>{"today's reading"}</SectionComment>
         <div className="text-[13px] font-mono text-foreground leading-[1.8] whitespace-pre-wrap">
           {renderBody(body)}
         </div>
-        {stats.length > 0 && (
-          <div className="border-t border-border mt-5 pt-4 grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4">
-            {stats.map((stat) => (
-              <div key={stat.label} className="flex flex-col gap-1 min-w-0">
-                <span className="text-[10px] uppercase tracking-[.1em] text-text-secondary">{stat.label}</span>
-                <span className="text-[13px] text-accent-gold font-mono break-words leading-[1.4]">{stat.value}</span>
-              </div>
-            ))}
+        {!isLegacy && metrics && (
+          <div className="border-t border-border mt-5 pt-4">
+            <SectionComment>daily metrics</SectionComment>
+            <MetricBar name="Deploy Luck" value={metrics.deployLuck} note={metrics.deployLuckNote} />
+            <MetricBar name="Bug Risk Index" value={metrics.bugRiskIndex} note={metrics.bugRiskNote} />
+            <MetricBar name="Sprint Energy" value={metrics.sprintEnergy} note={metrics.sprintEnergyNote} />
           </div>
+        )}
+        {!isLegacy && (avoid != null || coffeeRequirement != null) && (
+          <div className={`mt-4 grid gap-3 ${avoid != null && coffeeRequirement != null ? 'grid-cols-3' : 'grid-cols-1'}`}>
+            {avoid != null && <MiniStat label="Avoid" value={avoid} wide={avoid != null && coffeeRequirement != null} />}
+            {coffeeRequirement != null && (
+              <MiniStat label="Coffee req." value={`${coffeeRequirement} cups`} />
+            )}
+          </div>
+        )}
+        {!isLegacy && cursedCommit && (
+          <CursedCommit message={cursedCommit} />
         )}
       </article>
     </div>
@@ -156,7 +198,7 @@ export function ReadingCardSkeleton() {
   return (
     <div aria-live="polite">
       <div className="border border-border rounded-lg p-4 bg-surface animate-pulse">
-        <div className="h-3 w-48 bg-border rounded mb-4" />
+        <div className="h-2 w-28 bg-border rounded mb-4" />
         <div className="space-y-2">
           <div className="h-3 w-full bg-border rounded" />
           <div className="h-3 w-5/6 bg-border rounded" />
@@ -164,19 +206,20 @@ export function ReadingCardSkeleton() {
           <div className="h-3 w-full bg-border rounded" />
           <div className="h-3 w-3/4 bg-border rounded" />
         </div>
-        <div className="border-t border-border mt-4 pt-4 flex gap-6">
-          <div className="flex flex-col gap-1">
-            <div className="h-2 w-16 bg-border rounded" />
-            <div className="h-3 w-10 bg-border rounded" />
+        <div className="h-px bg-border mt-5 mb-4" />
+        <div className="h-2 w-24 bg-border rounded mb-3" />
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="mb-4">
+            <div className="flex justify-between mb-1">
+              <div className="h-2 w-20 bg-border rounded" />
+              <div className="h-2 w-12 bg-border rounded" />
+            </div>
+            <div className="h-3 w-full bg-border rounded" />
           </div>
-          <div className="flex flex-col gap-1">
-            <div className="h-2 w-16 bg-border rounded" />
-            <div className="h-3 w-10 bg-border rounded" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <div className="h-2 w-16 bg-border rounded" />
-            <div className="h-3 w-10 bg-border rounded" />
-          </div>
+        ))}
+        <div className="grid grid-cols-3 gap-3 mt-4">
+          <div className="col-span-2 h-14 bg-border rounded-lg" />
+          <div className="h-14 bg-border rounded-lg" />
         </div>
       </div>
     </div>

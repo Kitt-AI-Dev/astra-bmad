@@ -1,7 +1,7 @@
 # 404tune Prompt Style Guide
 
-**Version:** 2.4  
-**Last updated:** 2026-04-29  
+**Version:** 3.0  
+**Last updated:** 2026-04-30  
 **Governs:** All reading generation via the Anthropic Batch API  
 **Used by:** `scripts/batch-utils.ts` (canonical prompt template; consumed by `lib/batch/submit.ts` and `lib/batch/retrieve.ts`)
 
@@ -54,13 +54,19 @@ Dry wit, deadpan delivery, technically literate, never condescending. The voice 
 ```json
 {
   "general_reading": "Saturn squares your on-call rotation today, Scorpio. What looks like a cascading failure is actually a misconfigured alert threshold — trust your gut before you page the team.",
-  "lucky_value": "staging-only",
+  "deploy_luck": 43,
+  "deploy_luck_note": "do not touch the deploy button.",
+  "bug_risk_index": 88,
+  "bug_risk_note": "something is already broken.",
+  "sprint_energy": 62,
+  "sprint_energy_note": "enough to find it before standup.",
   "avoid": "Fridays. Especially this one.",
-  "planetary_influence": "Saturn □ Mars"
+  "coffee_requirement": 7,
+  "cursed_commit": "fix: it was always like this"
 }
 ```
 
-What makes it work: planetary body + role domain (on-call rotation) opens `general_reading`; specific prediction (misconfigured threshold, not "problems at work"); dry guidance (trust your gut); role-specific `lucky_value` (`staging-only` = a kubectl namespace, displayed under static `LUCKY NAMESPACE` header); callback kicker with comedic timing in `avoid`; `planetary_influence` symbol `□` matches the "squares" verb in the opening.
+What makes it work: planetary body + role domain (on-call rotation) opens `general_reading`; specific prediction (misconfigured threshold, not "problems at work"); dry guidance (trust your gut); `deploy_luck` 43 correlates with the instability narrative; `bug_risk_index` 88 is high and specific; `sprint_energy` 62 diverges (capable of finding the bug, but not thriving); `coffee_requirement` 7 signals a crunch day; `cursed_commit` captures the resigned energy; callback kicker in `avoid`.
 
 ---
 
@@ -100,82 +106,90 @@ All three elements must be grounded in the role's actual work domain. The "insig
 
 Do not blend domains. A DevOps reading that mentions user stories has failed. A Product Manager reading about kubectl has failed.
 
-### 2.3 Lucky Value (`lucky_value` JSON field)
+### 2.3 Deploy Luck (`deploy_luck`, `deploy_luck_note` JSON fields)
 
-The card displays this under a static **LUCKY NAMESPACE** column header. The LLM emits the value only — never include a label inside the value.
+**`deploy_luck`** — integer 0–100. The AI's judgment of how deployment-favorable the cosmic energy is for this sign/role today. 100 = ship with full confidence; 0 = do not touch the deploy button. Scale with the reading's overall tone — a reading about instability or conflict should produce a low score (20–40); a reading about flow or opportunity should produce a high score (65–90). Avoid round numbers. Examples: 76, 43, 91, 28, 55.
 
-**Constraint:** ≤ 24 characters. One short token or phrase, formatted as it would appear in the role's domain. No prose.
+**`deploy_luck_note`** — string, MAX 60 characters. One dry observation in the role's vocabulary that explains or contextualizes the score. No `//` prefix (the UI renders that). Tone: terse postmortem language for low scores; quiet DevOps confidence for high ones.
 
-The specificity is the joke — `staging-only` is funny because a kubectl namespace named "staging-only" is hostile in a way every DevOps engineer has felt. `Things will go well` is not.
+Examples:
+- `"the pipeline favors you."` (low bar, high score)
+- `"do not touch the deploy button."` (low score)
+- `"merge window opens at 3pm."` (specific, mid-range)
+- `"coverage lies."` (high bug risk, medium deploy luck)
 
-| Role | Value Type | Examples (≤24 chars) |
-|------|-----------|----------------------|
-| software-engineer | branch name | `fix/not-my-bug`, `feat/actually-a-patch` |
-| devops | kubectl namespace, cluster, Terraform workspace | `staging-only`, `production-legacy` |
-| qa | test environment, regression suite name | `qa-blue`, `regression-flaky` |
-| frontend | CSS property/value, viewport width | `position: relative`, `1280px` |
-| product-manager | story point estimate | `3`, `13`, `?` |
-| data-scientist | random seed, experiment ID, model checkpoint | `42`, `exploration-v3` |
-| designer | Figma frame name | `exploration-v7`, `final-final` |
-| solutions-architect | cloud region, ADR id, acronym | `us-east-1`, `ADR-0042`, `YAGNI` |
-| project-manager | milestone name or phase | `phase-2`, `go-live`, `UAT` |
-| pr-manager | story angle slug | `exclusive-launch`, `no-comment` |
-| hr-manager | headcount number | `7`, `12`, `+1 req pending` |
-| marketing | UTM source or campaign slug | `utm_source=organic`, `q2-push` |
+### 2.4 Bug Risk Index (`bug_risk_index`, `bug_risk_note` JSON fields)
 
-For software-engineer branch names: use the format `type/something-plausibly-true` (e.g., `fix/not-my-bug`, `feat/actually-a-patch`, `chore/the-real-work`).
+**`bug_risk_index`** — integer 0–100. Probability of introducing or encountering a bug today. Can diverge from `deploy_luck` — high bug risk doesn't always mean unsafe to deploy if tests catch everything. A Virgo QA might have low sprint energy but still catch every bug (high bug risk index, low deploy luck, but they're on it). Examples: 82, 34, 67.
 
-### 2.4 Avoid (`avoid` JSON field)
+**`bug_risk_note`** — string, MAX 60 characters. Same style as `deploy_luck_note`. Should sound like a brief incident triage note.
 
-The card displays this under a static **AVOID** column header. The LLM emits the value only — no `Avoid:` prefix.
+Examples:
+- `"something is already broken."` (high score)
+- `"one test is lying."` (mid-range)
+- `"coverage lies."` (high score)
+- `"you introduced it last Friday."` (high score, callback)
 
-**Constraint:** ≤ 50 characters total. One specific thing, optionally followed by a callback punchline. Often the best avoid line callbacks something in the body. Can be a single short clause.
+### 2.5 Sprint Energy (`sprint_energy`, `sprint_energy_note` JSON fields)
+
+**`sprint_energy`** — integer 0–100. The sign/role's capacity for productive work today. Independent of bug risk — a tired engineer can still catch bugs; a high-energy day can still be buggy. Examples: 35, 78, 52.
+
+**`sprint_energy_note`** — string, MAX 60 characters. Same style. Deadpan energy assessment.
+
+Examples:
+- `"functional, not fearsome."` (mid-range)
+- `"running on fumes."` (low)
+- `"surprisingly coherent."` (mid-high)
+- `"enough to attend standup."` (low)
+
+### 2.6 Field Caps (all fields)
+
+The reading is a single JSON object with ten fields. Length is enforced per-field, not in aggregate.
+
+| Field | Type | Constraint |
+|-------|------|-----------|
+| `general_reading` | string | 2–3 sentences, opens with the planetary aspect |
+| `deploy_luck` | integer | 0–100 |
+| `deploy_luck_note` | string | ≤ 60 characters |
+| `bug_risk_index` | integer | 0–100 |
+| `bug_risk_note` | string | ≤ 60 characters |
+| `sprint_energy` | integer | 0–100 |
+| `sprint_energy_note` | string | ≤ 60 characters |
+| `avoid` | string | ≤ 50 characters |
+| `coffee_requirement` | integer | 1–12 |
+| `cursed_commit` | string | ≤ 50 characters |
+
+`general_reading` includes the planetary opening as its first sentence. Do NOT include `avoid` or any metric commentary inside `general_reading` — those are separate fields.
+
+### 2.7 Avoid (`avoid` JSON field)
+
+**Constraint:** ≤ 50 characters total. One specific thing to avoid today, optionally followed by a callback punchline. Often the best avoid line callbacks something in the body. Can be a single short clause.
+
+The LLM emits the value only — no `Avoid:` prefix (the UI renders a static label).
 
 Examples (within cap):
 - `Fridays. Especially this one.` (29 chars)
 - `Merging to main before the CI logs load.` (40)
 - `The estimation meeting. It already knows.` (41)
 - `Production deployments after 4pm.` (33)
+- `Touching z-index without a system.` (35)
 
-### 2.5 Reading Length & Field Caps
+### 2.8 Coffee Requirement & Cursed Commit (`coffee_requirement`, `cursed_commit` JSON fields)
 
-The reading is a single JSON object with four fields. Length is enforced per-field, not in aggregate.
+**`coffee_requirement`** — integer 1–12. Cups of coffee needed to survive today. Should scale with cosmic stress:
+- 1–3 = calm alignment day
+- 4–6 = normal sprint day
+- 7–9 = crunch / high bug risk day
+- 10–12 = apocalyptic (reserved for maximum bug_risk_index + minimum sprint_energy readings)
 
-| Field | Constraint |
-|-------|-----------|
-| `general_reading` | 2–3 sentences, opens with the planetary aspect |
-| `lucky_value` | ≤ 24 characters |
-| `avoid` | ≤ 50 characters |
-| `planetary_influence` | ≤ 20 characters |
+**`cursed_commit`** — string, MAX 50 characters. The commit message the team will write today, predicted astrologically. Written as the message text only — no `git commit -m "..."` wrapper (the UI renders `$ git commit -m "..."` and quotes the value). Should feel like a real commit message from a real bad day — resigned, specific, plausible.
 
-`general_reading` includes the planetary opening as its first sentence. Do NOT include the lucky item or avoid line inside `general_reading` — those are separate fields.
-
-### 2.6 Planetary Influence (`planetary_influence` JSON field)
-
-Astrological shorthand for the day's dominant aspect, displayed under the static **PLANETARY INFLUENCE** column header.
-
-**Format:** `<Planet> <symbol> <Body>` — e.g. `Saturn □ Mars`.
-
-**Constraint:** ≤ 20 characters.
-
-**Aspect symbols (must match the verb used in the opening of `general_reading`):**
-
-| Verb | Symbol | Meaning |
-|------|--------|---------|
-| squares | `□` | tension, friction, obstacle |
-| trines | `△` | flow, ease, unexpected luck |
-| conjuncts | `☌` | amplification |
-| opposes | `☍` | conflict, competing forces |
-| sextiles | `✶` | opportunity requiring action |
-
-The planet should be the same one that opens `general_reading`. The body can be another planet or a zodiac sign.
-
-Examples (within cap):
-- `Saturn □ Mars` (13)
-- `Mercury ☍ Jupiter` (17)
-- `Venus △ Moon` (12)
-- `Mars ☌ Sun` (11)
-- `Saturn □ Sagittarius` (20)
+Examples:
+- `fix: undo yesterday` (low deploy luck, high bug risk)
+- `chore: sync with prod` (neutral, resigned)
+- `feat: remove the feature` (reversal energy)
+- `fix: it was always like this` (high bug risk, Scorpio energy)
+- `hotfix: lgtm` (low quality day, Sagittarius energy)
 
 ---
 
@@ -411,25 +425,43 @@ Sign personality: {sign_personality}
 
 Role vocabulary (use this domain exclusively): {role_vocabulary}
 
-Output a single JSON object with EXACTLY these four string fields and no others:
+Output a single JSON object with EXACTLY these ten fields and no others:
 
 {
   "general_reading": "...",
-  "lucky_value": "...",
-  "avoid": "...",
-  "planetary_influence": "..."
+  "deploy_luck": 76,
+  "deploy_luck_note": "the pipeline favors you.",
+  "bug_risk_index": 82,
+  "bug_risk_note": "something is already broken.",
+  "sprint_energy": 35,
+  "sprint_energy_note": "functional, not fearsome.",
+  "avoid": "Touching z-index without a system.",
+  "coffee_requirement": 5,
+  "cursed_commit": "fix: undo yesterday"
 }
 
 Field guidance:
 
-- general_reading — 2 to 3 sentences total. Open with: [Planet] [aspect] your [role-relevant domain] today, [Sign]. Then situation → insight → guidance. Stay strictly in the role's vocabulary. Weave in the month context subtly. No padding. Do NOT include the lucky item line or the avoid line here.
+- general_reading — 2 to 3 sentences total. Open with: [Planet] [aspect] your [role-relevant domain] today, [Sign]. Then situation → insight → guidance. Stay strictly in the role's vocabulary. Weave in the month context subtly. No padding.
   Valid aspect verbs: squares (tension), trines (flow), conjuncts (amplification), opposes (conflict), sextiles (opportunity requiring action).
 
-- lucky_value — a concrete, role-specific token formatted as it would actually appear in that domain. The card displays this under a static "LUCKY NAMESPACE" header — do not include any label in the value. Pick a value type appropriate to {role_label}: Software Engineer → branch name; DevOps → kubectl namespace or cluster name; QA → test environment; Frontend → CSS property/value; Product Manager → story point estimate; Project Manager → milestone name or phase; Data Scientist → random seed or experiment ID; Designer → Figma frame name; Solutions Architect → cloud region or ADR id; PR Manager → story angle slug; HR Manager → headcount number; Marketing Manager → UTM source or campaign slug. Examples: "fix/not-my-bug", "staging-only", "qa-blue", "position: relative", "3", "phase-2", "42", "exploration-v3", "us-east-1", "exclusive-launch", "7", "utm_source=organic". One short token or phrase, MAX 24 characters. No prose.
+- deploy_luck — integer 0–100. AI judgment of how deployment-favorable the cosmic energy is today. 100 = ship with confidence; 0 = do not touch the deploy button. Scale with the reading's overall energy — instability → low (20–40); easy flow → high (65–90). Avoid round numbers. Examples: 76, 43, 91, 28, 55.
 
-- avoid — what to avoid today. One specific thing, optionally followed by a callback punchline. MAX 50 characters total. Examples: "Fridays. Especially this one." (29 chars), "Merging to main before the CI logs load." (40), "The estimation meeting. It already knows." (41).
+- deploy_luck_note — string, MAX 60 characters. One dry observation in the role's vocabulary explaining the score. No "// " prefix (UI adds it). Examples: "the pipeline favors you.", "something is already broken.", "merge window opens at 3pm."
 
-- planetary_influence — astrological shorthand for the day's dominant aspect, in the form "<Planet> <symbol> <Body>". Use the planet from your general_reading opening. Symbols: ☌ conjunction, ☍ opposition, □ square, △ trine, ✶ sextile. Examples: "Saturn □ Mars", "Mercury ☍ Jupiter", "Venus △ Moon", "Mars ☌ Sun", "Sun ✶ Pluto". MAX 20 characters. Match the symbol to the aspect verb you used in general_reading.
+- bug_risk_index — integer 0–100. Probability of introducing or encountering a bug today. Can diverge from deploy_luck (high bug risk but safe to deploy if tests catch everything). Examples: 82, 34, 67.
+
+- bug_risk_note — string, MAX 60 characters. Same style as deploy_luck_note. Examples: "coverage lies.", "one test is lying.", "it was always like this."
+
+- sprint_energy — integer 0–100. The sign/role's capacity for productive work today. Independent of bug risk. Examples: 35, 78, 52.
+
+- sprint_energy_note — string, MAX 60 characters. Same style. Examples: "functional, not fearsome.", "running on fumes.", "surprisingly coherent."
+
+- avoid — string, MAX 50 characters. What to avoid today. One specific thing, optionally followed by a callback punchline. Examples: "Fridays. Especially this one." (29), "Merging to main before the CI logs load." (40).
+
+- coffee_requirement — integer 1–12. Cups of coffee to survive today. Scale with stress: 1–3 calm, 4–6 normal, 7–9 crunch, 10+ apocalyptic. Integer only.
+
+- cursed_commit — string, MAX 50 characters. The commit message the team will write today, predicted astrologically. Message text only — no git commit -m wrapper (UI renders it). Should feel like a real commit from a real bad day. Examples: "fix: undo yesterday", "chore: sync with prod", "feat: remove the feature".
 
 Output the JSON object only. No markdown code fences. No prose before or after. No "Here is your reading:". The very first character of your response must be { and the very last must be }.
 ```
@@ -495,20 +527,24 @@ For each generated reading, verify all of the following:
 
 **Schema:**
 - [ ] **Output is valid JSON** — parses without error; first char is `{`, last char is `}`; no markdown code fences
-- [ ] **Exactly four fields** — `general_reading`, `lucky_value`, `avoid`, `planetary_influence`; no extras, no missing
+- [ ] **Exactly ten fields** — `general_reading`, `deploy_luck`, `deploy_luck_note`, `bug_risk_index`, `bug_risk_note`, `sprint_energy`, `sprint_energy_note`, `avoid`, `coffee_requirement`, `cursed_commit`; no extras, no missing
+- [ ] **No legacy fields** — `lucky_value` and `planetary_influence` must NOT be present
 
 **Caps:**
-- [ ] **`lucky_value` ≤ 24 chars**
+- [ ] **`deploy_luck_note` ≤ 60 chars**
+- [ ] **`bug_risk_note` ≤ 60 chars**
+- [ ] **`sprint_energy_note` ≤ 60 chars**
 - [ ] **`avoid` ≤ 50 chars**
-- [ ] **`planetary_influence` ≤ 20 chars**
+- [ ] **`cursed_commit` ≤ 50 chars**
+- [ ] **Integer fields in range** — `deploy_luck`, `bug_risk_index`, `sprint_energy` each 0–100; `coffee_requirement` 1–12
 
 **Content:**
 - [ ] **Planetary opening present** — `general_reading` starts with `[Planet] [aspect verb] your [role domain] today, [Sign]`
-- [ ] **`general_reading` is 2–3 sentences** — no padding, no truncation; lucky and avoid lines are NOT inside it
+- [ ] **`general_reading` is 2–3 sentences** — no padding, no truncation; metric/avoid lines are NOT inside it
 - [ ] **Role vocabulary only** — no cross-role contamination (DevOps has no wireframes; PM has no kubectl)
-- [ ] **`lucky_value` concrete and role-appropriate** — real-domain value, no label inside the value
+- [ ] **Metric scores correlate with reading tone** — low `deploy_luck` when reading warns of instability; high `coffee_requirement` on crunch days; `cursed_commit` captures the day's energy
 - [ ] **`avoid` specific** — callbacks the body or lands as standalone punchline; no `Avoid:` prefix in the value
-- [ ] **`planetary_influence` matches opening** — same planet as the `general_reading` opening; symbol matches the aspect verb (squares→`□`, trines→`△`, conjuncts→`☌`, opposes→`☍`, sextiles→`✶`)
+- [ ] **`cursed_commit` is realistic** — reads like a real commit message; no `git commit -m` wrapper included
 - [ ] **Tone is dry/deadpan** — not jokey, not winking, not motivational
 - [ ] **Sign personality subtly expressed** — not stated explicitly, but present in the situation
 - [ ] **Could not apply to a different sign × role** — feels specific, not interchangeable
@@ -536,6 +572,8 @@ If a reading fails a check:
 
 | Version | Date | Change |
 |---------|------|--------|
+| 3.0 | 2026-04-30 | Reading page grand redesign (Epic 10): removed `lucky_value` and `planetary_influence`; added ten-field schema with `deploy_luck`, `deploy_luck_note`, `bug_risk_index`, `bug_risk_note`, `sprint_energy`, `sprint_energy_note`, `avoid`, `coffee_requirement`, `cursed_commit`; rewrote §2.3–2.8; updated §6 template and §7 checklist; updated canonical reference reading; updated Appendix A samples. |
+| 2.4 | 2026-04-29 | Added 4 new roles (solutions-architect, project-manager, pr-manager, hr-manager, marketing) with vocabulary banks and reading cues in Section 4. |
 | 2.3 | 2026-04-26 | Spec hygiene: rewrote §2.3–2.5 for JSON shape, added §2.6 (`planetary_influence`); refreshed Validation Checklist with schema/cap/content groups; split appendix into v2.x JSON samples (A) and v1.0 legacy prose samples (B); updated canonical reference example to JSON; fixed `Used by:` header reference. |
 | 2.2 | 2026-04-26 | Tightened `avoid` cap from 70 → 50 chars after layout testing showed two-line wraps in the stat column. |
 | 2.1 | 2026-04-26 | Dropped `lucky_label` from JSON spec — card renders a static "LUCKY NAMESPACE" header. Role-noun selection folded into `lucky_value` guidance. Added length caps: lucky_value ≤24, avoid ≤70, planetary_influence ≤20. |
@@ -545,48 +583,66 @@ If a reading fails a check:
 
 ---
 
-## Appendix A: Sample Readings (v2.x JSON Format)
+## Appendix A: Sample Readings (v3.x JSON Format)
 
-These illustrate the current four-field JSON output. Validate against the Section 7 checklist.
+These illustrate the current ten-field JSON output. Validate against the Section 7 checklist.
 
-### A1. Leo × Software Engineer (caps demonstration)
+### A1. Leo × Software Engineer (high energy day)
 
 ```json
 {
   "general_reading": "Saturn squares your code review queue today, Leo. The unsolicited refactor you bundled into Friday's PR will draw exactly the audience you wanted — and ten more LGTM-but-also-consider notes. Defend it with a changelog, not a Slack thread.",
-  "lucky_value": "feat/standing-ovation-pr",
+  "deploy_luck": 71,
+  "deploy_luck_note": "the CI is already judging you.",
+  "bug_risk_index": 64,
+  "bug_risk_note": "the refactor introduced exactly one thing.",
+  "sprint_energy": 89,
+  "sprint_energy_note": "dangerously productive.",
   "avoid": "Refactors on Friday. The CI is already mad at you.",
-  "planetary_influence": "Saturn □ Sagittarius"
+  "coffee_requirement": 4,
+  "cursed_commit": "feat/standing-ovation-pr: final cleanup"
 }
 ```
 
-Caps: `lucky_value` 24/24, `avoid` 50/50, `planetary_influence` 20/20. Demonstrates all three caps at exactly the limit. Symbol `□` matches "squares" verb. Leo's performative flair expressed through unsolicited refactor and audience-seeking.
+Leo's performative flair expressed through unsolicited refactor and audience-seeking. High sprint energy (Leo energy) with moderate bug risk (the refactor). `avoid` callbacks the reading body.
 
-### A2. Scorpio × DevOps Engineer
+### A2. Scorpio × DevOps Engineer (incident day)
 
 ```json
 {
   "general_reading": "Saturn squares your on-call rotation today, Scorpio. What looks like a cascading failure is actually a misconfigured alert threshold — trust your gut before you page the team.",
-  "lucky_value": "staging-only",
+  "deploy_luck": 43,
+  "deploy_luck_note": "do not touch the deploy button.",
+  "bug_risk_index": 88,
+  "bug_risk_note": "something is already broken.",
+  "sprint_energy": 62,
+  "sprint_energy_note": "enough to find it before standup.",
   "avoid": "Fridays. Especially this one.",
-  "planetary_influence": "Saturn □ Mars"
+  "coffee_requirement": 7,
+  "cursed_commit": "fix: it was always like this"
 }
 ```
 
-Caps: 12/24, 29/50, 13/20. Canonical reference port of the v1.0 sample to JSON. DevOps vocabulary only, Scorpio investigative intensity expressed (trust your gut, don't panic-page).
+Canonical reference reading. Scorpio investigative intensity expressed (trust your gut). Low deploy luck, high bug risk, medium sprint energy (capable but not thriving). High coffee requirement signals a crunch day.
 
-### A3. Aquarius × Designer
+### A3. Aquarius × Designer (confident energy day)
 
 ```json
 {
   "general_reading": "Uranus trines your information architecture today, Aquarius. The user flow you proposed in the last design review was correct — the team just hasn't caught up to it yet, and the usability test you're running this week will prove it.",
-  "lucky_value": "exploration-v7",
+  "deploy_luck": 79,
+  "deploy_luck_note": "ship the prototype. it already works.",
+  "bug_risk_index": 31,
+  "bug_risk_note": "clean day. the wireframes are correct.",
+  "sprint_energy": 84,
+  "sprint_energy_note": "dangerously visionary.",
   "avoid": "Explaining it again in the sync.",
-  "planetary_influence": "Uranus △ Aquarius"
+  "coffee_requirement": 3,
+  "cursed_commit": "chore: update designs per feedback"
 }
 ```
 
-Caps: 14/24, 32/50, 17/20. Symbol `△` matches "trines". UX vocabulary only (user flow, design review, usability test). Aquarius iconoclasm expressed as "team hasn't caught up yet" without stating the trait.
+Aquarius iconoclasm expressed as "team hasn't caught up yet" without stating the trait. High sprint energy + low bug risk = a confident creation day. `coffee_requirement` 3 reflects the easy flow. `cursed_commit` is resigned — the feedback is wrong but the designer will implement it anyway.
 
 ---
 
@@ -683,44 +739,78 @@ Team archetype: {team_archetype}
 Date: {date}
 Month context: {month_theme}
 
-Write the reading in this exact markdown format (no deviations):
+Output a single JSON object with EXACTLY these fields and no others:
 
-## {team_archetype}
+{
+  "heading": "{team_archetype}",
+  "body": "2–3 sentence team forecast grounded in the archetype's energy. Be specific.",
+  "role_predictions": {
+    "qa": "one sentence — a specific QA-flavored prediction",
+    "pm": "one sentence — a specific PM-flavored prediction",
+    "dev": "one sentence — a specific Dev-flavored prediction",
+    "designer": "one sentence — a specific Designer-flavored prediction"
+  },
+  "deploy_luck": 61,
+  "deploy_luck_note": "the team will consider it.",
+  "bug_risk_index": 74,
+  "bug_risk_note": "one test is lying.",
+  "sprint_energy": 45,
+  "sprint_energy_note": "enough to attend standup.",
+  "avoid": "Committing to the sprint goal before coffee.",
+  "coffee_requirement": 6,
+  "cursed_commit": "chore: sync with prod"
+}
 
-{2–3 sentences of team forecast for the day. Ground it in the archetype's energy. Be specific.}
+Field guidance:
 
-**QA will** {one sentence — a specific QA-flavored prediction}
-**PM will** {one sentence — a specific PM-flavored prediction}
-**Dev will** {one sentence — a specific Dev-flavored prediction}
-**Designer will** {one sentence — a specific Designer-flavored prediction}
+- heading — the team archetype name exactly as provided. Do not modify it.
+- body — 2–3 sentences of team forecast grounded in the archetype's energy. Be specific.
+- role_predictions — object with four keys: qa, pm, dev, designer. Each is one sentence in that role's vocabulary. These are observations, not encouragement.
+- deploy_luck — integer 0–100. Team-wide deployment energy today.
+- deploy_luck_note — string, MAX 60 characters. One dry observation explaining the score.
+- bug_risk_index — integer 0–100. Team probability of introducing or finding bugs today.
+- bug_risk_note — string, MAX 60 characters. Same style.
+- sprint_energy — integer 0–100. Team's collective capacity for productive work today.
+- sprint_energy_note — string, MAX 60 characters. Same style.
+- avoid — string, MAX 50 characters. One thing the team should not do today.
+- coffee_requirement — integer 1–12. Collective cups needed. Scale with stress.
+- cursed_commit — string, MAX 50 characters. The commit message this team will write today. Message text only — no git commit -m wrapper.
 
-**Lucky move:** {one concrete action for the team today}
-**Avoid:** {one specific thing the team should not do today}
-
-Output the markdown block only. No preamble. No explanation. Start with ## and end with the Avoid line.
+Output the JSON object only. No markdown code fences. No prose before or after. The very first character of your response must be { and the very last must be }.
 ```
 
 ### 6.4 Content Guidance
 
 - **Archetype energy is the frame** — every sentence should feel grounded in the archetype's situation. The Crunch Team is sweating a deadline; The Alignment-Seekers are stuck in a meeting about the meeting.
-- **Role nods are observations, not horoscope predictions** — "QA will surface a critical bug just before the meeting" reads as a knowing observation, not a cosmic forecast. Keep them deadpan.
+- **`role_predictions` are observations, not horoscope predictions** — "QA will surface a critical bug just before the meeting" reads as a knowing observation, not a cosmic forecast. Keep them deadpan. Each prediction is one sentence in that role's vocabulary.
 - **Specific beats generic** — "PM will reprioritize three stories from Done to In Progress" is funny. "PM will face challenges" is not.
-- **Lucky move is team-level** — something the whole team can act on, not individual advice. "Run the postmortem before Friday" or "merge the branch everyone is afraid to touch."
-- **Avoid is a shared team trap** — "The status update Slack thread. It has already started." or "The emergency standup. The fire is already out."
-- **max_tokens: 500** — the structured format is longer than individual readings (400). Do not reduce.
+- **`avoid` is a shared team trap** — "The status update Slack thread. It has already started." or "The emergency standup. The fire is already out." MAX 50 characters.
+- **Metric scores should reflect the archetype energy** — The Fire-Fighters should have high `bug_risk_index` and low `deploy_luck`; The Dreamers should have high `sprint_energy` and low `bug_risk_index`.
+- **`cursed_commit` captures team character** — The Nitpickers write `style: enforce trailing comma`; The Survivors write `chore: we made it`; The Crunch Team writes `fix: it works now please`.
+- **max_tokens: 600** — the JSON format is longer than individual readings. Do not reduce.
 
 ### 6.5 Sample Output
 
-```markdown
-## The Fire-Fighters
-
-Saturn squares your on-call rotation today. The incident from last Tuesday was resolved, postmortem written, action items assigned — and yet the alert that triggered it is firing again. The runbook was updated for the scenario that happened, not the one that is happening now.
-
-**QA will** find a second reproduction path that makes the blast radius larger than first reported.
-**PM will** ask if this affects the release date while the incident channel is still active.
-**Dev will** fix the symptom first and the root cause after the retrospective.
-**Designer will** not be involved but will be asked to update the status page banner.
-
-**Lucky move:** Write the postmortem before the fix. It focuses the diagnosis.
-**Avoid:** The "quick call" to align on scope. It is not quick and the scope is already decided.
+```json
+{
+  "heading": "The Fire-Fighters",
+  "body": "Saturn squares your on-call rotation today. The incident from last Tuesday was resolved, postmortem written, action items assigned — and yet the alert that triggered it is firing again. The runbook was updated for the scenario that happened, not the one that is happening now.",
+  "role_predictions": {
+    "qa": "QA will find a second reproduction path that makes the blast radius larger than first reported.",
+    "pm": "PM will ask if this affects the release date while the incident channel is still active.",
+    "dev": "Dev will fix the symptom first and the root cause after the retrospective.",
+    "designer": "Designer will not be involved but will be asked to update the status page banner."
+  },
+  "deploy_luck": 22,
+  "deploy_luck_note": "do not touch the deploy button.",
+  "bug_risk_index": 91,
+  "bug_risk_note": "the alert is firing again.",
+  "sprint_energy": 58,
+  "sprint_energy_note": "running on adrenaline, not caffeine.",
+  "avoid": "The quick call to align on scope. It isn't.",
+  "coffee_requirement": 9,
+  "cursed_commit": "fix: revert the fix"
+}
 ```
+
+Low `deploy_luck` + high `bug_risk_index` reflects the Fire-Fighters' incident energy. `coffee_requirement` 9 = crunch. `cursed_commit` is the resigned loop of an active incident. Role predictions are deadpan observations, not encouragement.

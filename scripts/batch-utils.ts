@@ -38,7 +38,7 @@ export function parseCustomId(customId: string): { sign: Sign; role: Role; date:
 }
 
 // ---------------------------------------------------------------------------
-// Prompt constants (source of truth: docs/prompt-style-guide.md v1.1)
+// Prompt constants (source of truth: docs/prompt-style-guide.md v3.0)
 // Update these when the style guide version changes.
 // ---------------------------------------------------------------------------
 
@@ -99,7 +99,7 @@ export const ROLE_VOCABULARY: Record<Role, string> = {
     'campaign, conversion rate, CTR, funnel, CAC, LTV, attribution, A/B test, copy, landing page, SEO, organic, paid, impression, click-through, content calendar, brand voice, persona, retargeting, lead gen, pipeline, MQL, SQL, UTM, ROAS',
 }
 
-// Canonical prompt template — copied from docs/prompt-style-guide.md Section 6 v2.0.
+// Canonical prompt template — copied from docs/prompt-style-guide.md Section 6 v3.0.
 // Do NOT read the markdown file at runtime.
 const PROMPT_TEMPLATE = `You are writing a daily tech horoscope for 404tune — a site where software workers check their zodiac-based reading for the day.
 
@@ -115,25 +115,43 @@ Sign personality: {sign_personality}
 
 Role vocabulary (use this domain exclusively): {role_vocabulary}
 
-Output a single JSON object with EXACTLY these four string fields and no others:
+Output a single JSON object with EXACTLY these ten fields and no others:
 
 {
   "general_reading": "...",
-  "lucky_value": "...",
-  "avoid": "...",
-  "planetary_influence": "..."
+  "deploy_luck": 76,
+  "deploy_luck_note": "the pipeline favors you.",
+  "bug_risk_index": 82,
+  "bug_risk_note": "something is already broken.",
+  "sprint_energy": 35,
+  "sprint_energy_note": "functional, not fearsome.",
+  "avoid": "Touching z-index without a system.",
+  "coffee_requirement": 5,
+  "cursed_commit": "fix: undo yesterday"
 }
 
 Field guidance:
 
-- general_reading — 2 to 3 sentences total. Open with: [Planet] [aspect] your [role-relevant domain] today, [Sign]. Then situation → insight → guidance. Stay strictly in the role's vocabulary. Weave in the month context subtly. No padding. Do NOT include the lucky item line or the avoid line here.
+- general_reading — 2 to 3 sentences total. Open with: [Planet] [aspect] your [role-relevant domain] today, [Sign]. Then situation → insight → guidance. Stay strictly in the role's vocabulary. Weave in the month context subtly. No padding.
   Valid aspect verbs: squares (tension), trines (flow), conjuncts (amplification), opposes (conflict), sextiles (opportunity requiring action).
 
-- lucky_value — a concrete, role-specific token formatted as it would actually appear in that domain. The card displays this under a static "LUCKY NAMESPACE" header — do not include any label in the value. Pick a value type appropriate to {role_label}: Software Engineer → branch name; DevOps → kubectl namespace or cluster name; QA → test environment; Frontend → CSS property/value; Product Manager → story point estimate; Project Manager → milestone name or phase; Data Scientist → random seed or experiment ID; Designer → Figma frame name; Solutions Architect → cloud region or ADR id; PR Manager → story angle slug; HR Manager → headcount number; Marketing Manager → UTM source or campaign slug. Examples: "fix/not-my-bug", "staging-only", "qa-blue", "position: relative", "3", "phase-2", "42", "exploration-v3", "us-east-1", "exclusive-launch", "7", "utm_source=organic". One short token or phrase, MAX 24 characters. No prose.
+- deploy_luck — integer 0–100. AI judgment of how deployment-favorable the cosmic energy is today. 100 = ship with confidence; 0 = do not touch the deploy button. Scale with the reading's overall energy — instability → low (20–40); easy flow → high (65–90). Avoid round numbers. Examples: 76, 43, 91, 28, 55.
 
-- avoid — what to avoid today. One specific thing, optionally followed by a callback punchline. MAX 50 characters total. Examples: "Fridays. Especially this one." (29 chars), "Merging to main before the CI logs load." (40), "The estimation meeting. It already knows." (41).
+- deploy_luck_note — string, MAX 60 characters. One dry observation in the role's vocabulary explaining the score. No "// " prefix (UI adds it). Examples: "the pipeline favors you.", "something is already broken.", "merge window opens at 3pm."
 
-- planetary_influence — astrological shorthand for the day's dominant aspect, in the form "<Planet> <symbol> <Body>". Use the planet from your general_reading opening. Symbols: ☌ conjunction, ☍ opposition, □ square, △ trine, ✶ sextile. Examples: "Saturn □ Mars", "Mercury ☍ Jupiter", "Venus △ Moon", "Mars ☌ Sun", "Sun ✶ Pluto". MAX 20 characters. Match the symbol to the aspect verb you used in general_reading.
+- bug_risk_index — integer 0–100. Probability of introducing or encountering a bug today. Can diverge from deploy_luck (high bug risk but safe to deploy if tests catch everything). Examples: 82, 34, 67.
+
+- bug_risk_note — string, MAX 60 characters. Same style as deploy_luck_note. Examples: "coverage lies.", "one test is lying.", "it was always like this."
+
+- sprint_energy — integer 0–100. The sign/role's capacity for productive work today. Independent of bug risk. Examples: 35, 78, 52.
+
+- sprint_energy_note — string, MAX 60 characters. Same style. Examples: "functional, not fearsome.", "running on fumes.", "surprisingly coherent."
+
+- avoid — string, MAX 50 characters. What to avoid today. One specific thing, optionally followed by a callback punchline. Examples: "Fridays. Especially this one." (29), "Merging to main before the CI logs load." (40).
+
+- coffee_requirement — integer 1–12. Cups of coffee to survive today. Scale with stress: 1–3 calm, 4–6 normal, 7–9 crunch, 10+ apocalyptic. Integer only.
+
+- cursed_commit — string, MAX 50 characters. The commit message the team will write today, predicted astrologically. Message text only — no git commit -m wrapper (UI renders it). Should feel like a real commit from a real bad day. Examples: "fix: undo yesterday", "chore: sync with prod", "feat: remove the feature".
 
 Output the JSON object only. No markdown code fences. No prose before or after. No "Here is your reading:". The very first character of your response must be { and the very last must be }.`
 
@@ -218,21 +236,47 @@ Team archetype: {team_archetype}
 Date: {date}
 Month context: {month_theme}
 
-Write the reading in this exact markdown format (no deviations):
+Output a single JSON object with EXACTLY these fields and no others:
 
-## {team_archetype}
+{
+  "heading": "{team_archetype}",
+  "body": "4–6 sentences of team forecast grounded in the archetype's energy. Be specific. Where it feels natural, weave in an observation about a specific role (QA, PM, Dev, Designer) as part of the prose — no labels, no callouts, just part of the narrative.",
+  "deploy_luck": 61,
+  "deploy_luck_note": "the team will consider it.",
+  "bug_risk_index": 74,
+  "bug_risk_note": "one test is lying.",
+  "sprint_energy": 45,
+  "sprint_energy_note": "enough to attend standup.",
+  "avoid": "Committing to the sprint goal before coffee.",
+  "coffee_requirement": 6,
+  "cursed_commit": "chore: sync with prod"
+}
 
-{2–3 sentences of team forecast for the day. Ground it in the archetype's energy. Be specific.}
+Field guidance:
 
-**QA will** {one sentence — a specific QA-flavored prediction}
-**PM will** {one sentence — a specific PM-flavored prediction}
-**Dev will** {one sentence — a specific Dev-flavored prediction}
-**Designer will** {one sentence — a specific Designer-flavored prediction}
+- heading — the team archetype name exactly as provided. Do not modify it.
 
-**Lucky move:** {one concrete action for the team today}
-**Avoid:** {one specific thing the team should not do today}
+- body — 4–6 sentences of team forecast. Ground it in the archetype's energy. Be specific. Where it feels natural, weave in an observation about a specific role (QA, PM, Dev, Designer) as part of the prose — no labels, no callouts, just part of the narrative. Not every reading needs a role mention.
 
-Output the markdown block only. No preamble. No explanation. Start with ## and end with the Avoid line.`
+- deploy_luck — integer 0–100. Team-wide deployment energy today. 100 = ship it; 0 = do not touch prod.
+
+- deploy_luck_note — string, MAX 60 characters. One dry observation explaining the score.
+
+- bug_risk_index — integer 0–100. Team probability of introducing or finding bugs today.
+
+- bug_risk_note — string, MAX 60 characters. Same style.
+
+- sprint_energy — integer 0–100. Team's collective capacity for productive work today.
+
+- sprint_energy_note — string, MAX 60 characters. Same style.
+
+- avoid — string, MAX 50 characters. One thing the team should not do today.
+
+- coffee_requirement — integer 1–12. Collective cups needed. Scale with stress.
+
+- cursed_commit — string, MAX 50 characters. The commit message this team will write today. Message text only — no git commit -m wrapper.
+
+Output the JSON object only. No markdown code fences. No prose before or after. The very first character of your response must be { and the very last must be }.`
 
 export function buildTeamPrompt(date: string, slot: number, monthTheme: string): string {
   const archetype = TEAM_ARCHETYPES[slot]
