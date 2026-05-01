@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { CookieBanner } from "@/components/CookieBanner";
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
@@ -28,6 +29,7 @@ export default function RootLayout({
           Skip to reading
         </a>
         {children}
+        <CookieBanner />
       </body>
     </html>
   );

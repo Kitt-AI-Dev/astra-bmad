@@ -13,8 +13,8 @@ export default function NotFound() {
         <Header />
         <div className="py-16 space-y-4 text-sm">
           <p className="text-muted-foreground">
-            // 404: cosmic coordinates not found<br />
-            // Mercury is in retrograde and so is this URL.
+            {'// 404: cosmic coordinates not found'}<br />
+            {'// Mercury is in retrograde and so is this URL.'}
           </p>
           <p className="text-foreground">
             exit 1 — requested reading has drifted into a parallel deployment

@@ -5,7 +5,6 @@ import * as Sentry from '@sentry/nextjs'
 
 export default function GlobalError({
   error,
-  reset: _reset,
 }: {
   error: Error & { digest?: string }
   reset: () => void
@@ -33,8 +32,8 @@ export default function GlobalError({
       >
         <div style={{ maxWidth: '400px' }}>
           <p style={{ marginBottom: '1rem', lineHeight: 1.6 }}>
-            // kernel panic: the astral plane is unreachable<br />
-            // Even the stars need a restart sometimes.
+            {'// kernel panic: the astral plane is unreachable'}<br />
+            {'// Even the stars need a restart sometimes.'}
           </p>
           <button
             onClick={() => window.location.reload()}
@@ -52,6 +51,9 @@ export default function GlobalError({
           >
             $ reboot --hard-refresh
           </button>
+          {/* global-error wraps the crashed app; a full reload via plain <a> is intentional.
+              <Link> would attempt client navigation against a broken React tree. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a href="/" style={{ display: 'block', color: '#7C6EF5' }}>
             $ 404tune --go-home
           </a>

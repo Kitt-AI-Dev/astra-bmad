@@ -1,6 +1,7 @@
 import HomeRedirect from '@/components/HomeRedirect'
 import SignRoleSelector from '@/components/SignRoleSelector'
 import { Header } from '@/components/Header'
+import { Footer } from '@/components/Footer'
 
 export default async function Home({
   searchParams,
@@ -14,6 +15,7 @@ export default async function Home({
         <Header />
         <HomeRedirect skipRedirect={change === '1'} />
         <SignRoleSelector />
+        <Footer />
       </div>
     </main>
   )

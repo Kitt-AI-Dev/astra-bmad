@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Header } from '@/components/Header'
+import { Footer } from '@/components/Footer'
 
 function getTeamSlotCookie(): { date: string; reading_id: string } | null {
   try {
@@ -68,6 +69,7 @@ export default function TeamPage() {
             {"// the stars haven't clocked in yet — check back after standup"}
           </p>
         )}
+        <Footer />
       </div>
     </main>
   )

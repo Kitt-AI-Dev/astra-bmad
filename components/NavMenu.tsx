@@ -2,17 +2,23 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 import { getPrefs } from '@/lib/cookies'
+
+// No-op subscribe: read prefs cookie once at mount; do not react to cross-tab changes.
+// Matches the original useEffect-based behavior.
+const noopSubscribe = () => () => {}
 
 export function NavMenu() {
   const pathname = usePathname()
-  const [personalHref, setPersonalHref] = useState('/')
-
-  useEffect(() => {
-    const prefs = getPrefs()
-    if (prefs) setPersonalHref(`/${prefs.sign}/${prefs.role}`)
-  }, [])
+  const personalHref = useSyncExternalStore(
+    noopSubscribe,
+    () => {
+      const prefs = getPrefs()
+      return prefs ? `/${prefs.sign}/${prefs.role}` : '/'
+    },
+    () => '/',
+  )
 
   if (pathname.startsWith('/admin')) return null
 

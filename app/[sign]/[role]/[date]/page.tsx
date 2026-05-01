@@ -7,6 +7,7 @@ import type { Sign, Role } from '@/lib/constants'
 import { ReadingCard } from '@/components/ReadingCard'
 import { ShareFooter } from '@/components/ShareFooter'
 import { Header } from '@/components/Header'
+import { Footer } from '@/components/Footer'
 import { formatSign, formatRole } from '@/lib/format'
 
 export const dynamicParams = true
@@ -104,7 +105,7 @@ export default async function DatePage({
   // Mirror the RLS policy in 0002_publish_gate_local_timezone.sql: allow up to
   // tomorrow-UTC so positive-offset readers (CEST, JST, AEST...) see their
   // local-date reading at local midnight, not UTC midnight.
-  const maxDate = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
+  const maxDate = new Date(new Date().getTime() + 86_400_000).toISOString().slice(0, 10)
   const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://404tune.app'
 
   let reading = null
@@ -134,6 +135,7 @@ export default async function DatePage({
         </p>
         <ReadingCard reading={reading} nullVariant={date < today ? 'unavailable' : 'not-published'} />
         {reading && <ShareFooter url={`${base}/${sign}/${role}/${reading.date}`} />}
+        <Footer />
       </div>
     </main>
   )

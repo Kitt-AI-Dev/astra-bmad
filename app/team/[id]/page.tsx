@@ -3,6 +3,7 @@ import { createPublicClient } from '@/lib/supabase-server-public'
 import { Header } from '@/components/Header'
 import { ShareFooter } from '@/components/ShareFooter'
 import { TeamReadingCard } from '@/components/TeamReadingCard'
+import { Footer } from '@/components/Footer'
 
 export const revalidate = false
 
@@ -65,6 +66,7 @@ export default async function TeamReadingPage({
         {state === 'ok' && reading && (
           <ShareFooter url={`${base}/team/${reading.id}`} />
         )}
+        <Footer />
       </div>
     </main>
   )

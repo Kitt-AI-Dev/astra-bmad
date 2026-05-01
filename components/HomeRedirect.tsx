@@ -14,7 +14,7 @@ export default function HomeRedirect({ skipRedirect = false }: { skipRedirect?: 
     if (prefs && SIGNS.includes(prefs.sign) && ROLES.includes(prefs.role)) {
       router.replace(`/${prefs.sign}/${prefs.role}`)
     }
-  }, [skipRedirect])
+  }, [skipRedirect, router])
 
   return null
 }

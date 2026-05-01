@@ -15,10 +15,11 @@ Playwright tests MUST include a `page.on('console', ...)` listener. Before marki
 
 1. Collect every `error` and `warning` message from the browser console
 2. List them explicitly — never summarize as "clean" without showing what was found
-3. Evaluate each message individually — React warnings (`hydration`, `key`, `prop types`, `act(...)`) are real bugs, not dev-mode noise
-4. A story is only `done` when the list is empty, or every entry is explicitly accepted as non-actionable with reasoning
+3. React warnings (`hydration`, `key`, `prop types`, `act(...)`) are real bugs, not dev-mode noise
+4. **No console error may be dismissed without explicit user approval** — show the error, stop, and wait for Kitt to say it is acceptable before proceeding
+5. A story is only `done` when the list is empty, or Kitt has explicitly approved each entry as non-actionable
 
-When the user asks "how about console errors?" — produce the raw list and evaluate each item one by one.
+When the user asks "how about console errors?" — produce the raw list one by one, then wait for Kitt's response.
 
 ## Failed tests — zero tolerance
 

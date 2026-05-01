@@ -7,6 +7,7 @@ import { ReadingCard } from '@/components/ReadingCard'
 import { DateGuard } from '@/components/DateGuard'
 import { ShareFooter } from '@/components/ShareFooter'
 import { Header } from '@/components/Header'
+import { Footer } from '@/components/Footer'
 import { formatSign, formatRole } from '@/lib/format'
 
 export const revalidate = 86400
@@ -116,6 +117,7 @@ export default async function SignRolePage({
             {reading && <ShareFooter url={`${base}/${sign}/${role}/${reading.date}`} changeHref="/?change=1" />}
           </div>
         </DateGuard>
+        <Footer />
       </div>
     </main>
   )

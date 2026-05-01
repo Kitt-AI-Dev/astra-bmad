@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef, useSyncExternalStore } from 'react'
 import { useRouter } from 'next/navigation'
 import { SIGNS, ROLES } from '@/lib/constants'
 import type { Sign, Role } from '@/lib/constants'
@@ -12,6 +12,25 @@ const SIGN_SYMBOLS: Record<string, string> = {
   sagittarius: '♐︎', capricorn: '♑︎', aquarius: '♒︎', pisces: '♓︎',
 }
 
+// No-op subscribe: read prefs cookie once at mount; user edits flow through `edits` state.
+// Cross-tab cookie writes are not reflected — matches original useEffect-based behavior.
+const noopSubscribe = () => () => {}
+
+// useSyncExternalStore requires getSnapshot to return a stable reference for unchanged
+// data (Object.is check). getPrefs() parses the cookie and returns a fresh object each
+// call, which would trigger React's "getSnapshot should be cached" guard. Cache the last
+// returned object keyed on the raw cookie string so identical cookies return the same ref.
+let cachedCookieRaw: string | null = null
+let cachedPrefs: ReturnType<typeof getPrefs> = null
+function getPrefsCached(): ReturnType<typeof getPrefs> {
+  if (typeof document === 'undefined') return null
+  const raw = document.cookie
+  if (raw === cachedCookieRaw) return cachedPrefs
+  cachedCookieRaw = raw
+  cachedPrefs = getPrefs()
+  return cachedPrefs
+}
+
 function chipClass(selected: boolean): string {
   const base =
     'bg-transparent px-2 sm:px-3 py-1.5 border rounded-[4px] text-[11px] sm:text-[12px] font-mono cursor-pointer transition-all duration-150'
@@ -20,23 +39,26 @@ function chipClass(selected: boolean): string {
     : `${base} border-border text-text-secondary hover:border-text-secondary hover:text-text-primary`
 }
 
+type Edits = { sign?: Sign; role?: Role }
+
 export default function SignRoleSelector() {
   const router = useRouter()
-  const [sign, setSign] = useState<Sign | null>(null)
-  const [role, setRole] = useState<Role | null>(null)
+  const cookiePrefs = useSyncExternalStore(
+    noopSubscribe,
+    getPrefsCached,
+    () => null,
+  )
+  const [edits, setEdits] = useState<Edits>({})
   const signContainerRef = useRef<HTMLDivElement>(null)
   const roleContainerRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const prefs = getPrefs()
-    if (prefs) {
-      setSign(prefs.sign)
-      setRole(prefs.role)
-    }
-  }, [])
+  const sign: Sign | null =
+    'sign' in edits ? (edits.sign ?? null) : ((cookiePrefs?.sign as Sign | undefined) ?? null)
+  const role: Role | null =
+    'role' in edits ? (edits.role ?? null) : ((cookiePrefs?.role as Role | undefined) ?? null)
 
   function handleSignSelect(s: Sign) {
-    setSign(s)
+    setEdits((prev) => ({ ...prev, sign: s }))
     if (role) {
       setPrefs(s, role)
       router.push(`/${s}/${role}`)
@@ -44,7 +66,7 @@ export default function SignRoleSelector() {
   }
 
   function handleRoleSelect(r: Role) {
-    setRole(r)
+    setEdits((prev) => ({ ...prev, role: r }))
     if (sign) {
       setPrefs(sign, r)
       router.push(`/${sign}/${r}`)
