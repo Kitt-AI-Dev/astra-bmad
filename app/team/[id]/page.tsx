@@ -59,9 +59,9 @@ export default async function TeamReadingPage({
     <main className="min-h-screen bg-background px-6 pt-4 pb-10">
       <div id="reading" className="max-w-[700px] mx-auto">
         <Header />
-        <p className="text-[13px] font-mono text-accent-gold mb-5">
+        <h1 className="text-[13px] font-mono text-accent-gold mb-5">
           {'$ '}<span className="text-accent-violet">404tune</span>{' --team'}
-        </p>
+        </h1>
         <TeamReadingCard reading={state === 'ok' ? reading : null} state={state} />
         {state === 'ok' && reading && (
           <ShareFooter url={`${base}/team/${reading.id}`} />

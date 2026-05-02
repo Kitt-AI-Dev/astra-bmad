@@ -14,6 +14,14 @@ export const metadata: Metadata = {
   description: "Your daily horoscope for your sign × IT role",
 };
 
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: '404tune',
+  url: 'https://404tune.dev',
+  description: 'Daily horoscope for your zodiac sign and IT role',
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,6 +36,10 @@ export default function RootLayout({
         >
           Skip to reading
         </a>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+        />
         {children}
         <CookieBanner />
       </body>

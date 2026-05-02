@@ -64,6 +64,7 @@ export default function TeamPage() {
     <main className="min-h-screen bg-background px-6 pt-4 pb-10">
       <div className="max-w-[700px] mx-auto">
         <Header />
+        <h1 className="sr-only">Team Horoscope — 404tune</h1>
         {placeholder && (
           <p className="text-[13px] font-mono text-text-secondary mt-4">
             {"// the stars haven't clocked in yet — check back after standup"}

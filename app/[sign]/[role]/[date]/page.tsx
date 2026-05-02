@@ -9,6 +9,7 @@ import { ShareFooter } from '@/components/ShareFooter'
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
 import { formatSign, formatRole } from '@/lib/format'
+import { extractDescription } from '@/lib/content'
 
 export const dynamicParams = true
 export const revalidate = false
@@ -35,16 +36,7 @@ export async function generateMetadata({
       .eq('suppressed', false)
       .maybeSingle()
     if (data?.content) {
-      try {
-        const parsed = JSON.parse(data.content)
-        if (typeof parsed?.general_reading === 'string') {
-          description = parsed.general_reading.slice(0, 150) + '…'
-        } else {
-          description = data.content.slice(0, 150) + '…'
-        }
-      } catch {
-        description = data.content.slice(0, 150) + '…'
-      }
+      description = extractDescription(data.content)
     }
   } catch (err) {
     console.warn('[generateMetadata] description fetch failed:', err)
@@ -60,11 +52,13 @@ export async function generateMetadata({
       url: `${base}/${sign}/${role}/${date}`,
       siteName: '404tune',
       type: 'article',
+      images: [{ url: `${base}/${sign}/${role}/${date}/opengraph-image`, width: 1200, height: 630 }],
     },
     twitter: {
       card: 'summary_large_image',
       title: `${signLabel} ${roleLabel} · ${date} — 404tune`,
       description,
+      images: [`${base}/${sign}/${role}/${date}/opengraph-image`],
     },
   }
 }
@@ -126,15 +120,33 @@ export default async function DatePage({
     console.error('[readings] DB fetch failed:', error)
   }
 
+  const signLabel = formatSign(sign)
+  const roleLabel = formatRole(role)
+  const schemaDescription = reading?.content
+    ? extractDescription(reading.content)
+    : `${signLabel} ${roleLabel} horoscope for ${date} — 404tune`
+  const creativeWorkSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'CreativeWork',
+    name: `${signLabel} ${roleLabel} · ${date} — 404tune`,
+    description: schemaDescription,
+    url: `${base}/${sign}/${role}/${date}`,
+    datePublished: date,
+  }
+
   return (
     <main className="min-h-screen bg-background px-6 pt-4 pb-10">
       <div id="reading" className="max-w-[700px] mx-auto">
         <Header />
-        <p className="text-[13px] font-mono text-accent-gold mb-5">
+        <h1 className="text-[13px] font-mono text-accent-gold mb-5">
           {'$ '}<span className="text-accent-violet">404tune</span>{` --sign ${sign} --role ${role} --date ${date}`}
-        </p>
+        </h1>
         <ReadingCard reading={reading} nullVariant={date < today ? 'unavailable' : 'not-published'} />
         {reading && <ShareFooter url={`${base}/${sign}/${role}/${reading.date}`} />}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(creativeWorkSchema) }}
+        />
         <Footer />
       </div>
     </main>

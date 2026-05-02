@@ -5,6 +5,7 @@ import { createPublicClient } from '@/lib/supabase-server-public'
 import { SIGNS, ROLES } from '@/lib/constants'
 import type { Sign, Role } from '@/lib/constants'
 import { formatSign, formatRole } from '@/lib/format'
+import { extractDescription } from '@/lib/content'
 
 export const alt = '404tune reading'
 export const size = { width: 1200, height: 630 }
@@ -43,14 +44,7 @@ export default async function Image({
         .lte('date', maxDate)
         .maybeSingle()
       if (data?.content) {
-        try {
-          const parsed = JSON.parse(data.content)
-          excerpt = typeof parsed?.general_reading === 'string'
-            ? parsed.general_reading.slice(0, 200)
-            : data.content.slice(0, 200)
-        } catch {
-          excerpt = data.content.slice(0, 200)
-        }
+        excerpt = extractDescription(data.content, 200)
       }
     } catch (err) {
       console.warn('[opengraph-image] DB fetch failed:', err)
