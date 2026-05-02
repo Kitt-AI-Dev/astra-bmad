@@ -29,18 +29,13 @@ export const metadata: Metadata = {
   },
 }
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{ change?: string }>
-}) {
-  const { change } = await searchParams
+export default function Home() {
   return (
     <main className="min-h-screen bg-background px-6 pt-4 pb-10">
       <div className="max-w-[700px] mx-auto">
         <Header />
         <h1 className="sr-only">Your daily horoscope for your sign and IT role</h1>
-        <HomeRedirect skipRedirect={change === '1'} />
+        <HomeRedirect />
         <SignRoleSelector />
         <Footer />
       </div>

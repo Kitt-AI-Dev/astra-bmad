@@ -122,7 +122,7 @@ export default async function SignRolePage({
         <DateGuard serverDate={today} sign={sign} role={role}>
           <div className="animate-in fade-in duration-150">
             <ReadingCard reading={reading} nullVariant="not-published" />
-            {reading && <ShareFooter url={`${base}/${sign}/${role}/${reading.date}`} changeHref="/?change=1" />}
+            {reading && <ShareFooter url={`${base}/${sign}/${role}/${reading.date}`} changeHref="/" />}
           </div>
         </DateGuard>
         <script
