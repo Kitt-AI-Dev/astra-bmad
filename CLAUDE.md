@@ -1,5 +1,19 @@
 @AGENTS.md
 
+# Hard Rules — No Exceptions
+
+## No hardcoded production URLs
+Never hardcode `https://404tune.dev` or any production URL in source code. Always use `process.env.NEXT_PUBLIC_APP_URL!`. If the env var is not set, the build should fail — not silently fall back to a hardcoded string. No story note, reasoning, or edge case justifies a hardcoded URL.
+
+## Established rules are not open questions
+Any rule already in place — robots.txt indexing decisions, console error handling, link verification — is not a negotiation point during implementation. If a rule should change, Kitt raises it. Do not suggest reversals or ask whether a rule should be reconsidered.
+
+## Audit-to-story conversion must be exhaustive in one pass
+When converting any audit output (SEO audit, security audit, etc.) to stories, every finding must be accounted for in a single planning pass — either as a story or as an explicit documented decision to skip. No finding may fall through without a recorded disposition.
+
+## Asset integrity before touching build pipeline
+Before working with fonts, images, or binary assets, verify file integrity. Use `file <path>` to confirm the file type matches its extension. An HTML file named `.ttf` is not a font.
+
 # Definition of Done
 
 Every story or feature change is not done until a Playwright test covering the changed golden path passes against `localhost:3000`.

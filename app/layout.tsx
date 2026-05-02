@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next";
 import { CookieBanner } from "@/components/CookieBanner";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
@@ -42,7 +44,9 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
         />
+        <Analytics />
         {children}
+        <GoogleAnalytics />
         <CookieBanner />
       </body>
     </html>

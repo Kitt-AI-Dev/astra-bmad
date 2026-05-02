@@ -1,6 +1,7 @@
 'use client'
 
 const CONSENT_COOKIE = '404tune_consent'
+const CONSENT_CHANGED_EVENT = '404tune:consent-changed'
 const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000
 
 type ConsentValue = {
@@ -41,4 +42,10 @@ export function setConsent(analytics: boolean): void {
   document.cookie = `${CONSENT_COOKIE}=${encodeURIComponent(
     JSON.stringify(value)
   )}; path=/; max-age=31536000; SameSite=Lax`
+  window.dispatchEvent(new Event(CONSENT_CHANGED_EVENT))
+}
+
+export function subscribeConsentChange(callback: () => void): () => void {
+  window.addEventListener(CONSENT_CHANGED_EVENT, callback)
+  return () => window.removeEventListener(CONSENT_CHANGED_EVENT, callback)
 }

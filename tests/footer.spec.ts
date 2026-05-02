@@ -29,9 +29,10 @@ test.describe('Site footer', () => {
     })
 
     await page.goto('http://localhost:3000/privacy')
-    await expect(page.getByRole('contentinfo')).toBeVisible()
-    await expect(page.getByRole('link', { name: 'privacy policy' })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'terms of service' })).toBeVisible()
+    const footer = page.getByRole('contentinfo')
+    await expect(footer).toBeVisible()
+    await expect(footer.getByRole('link', { name: 'privacy policy' })).toBeVisible()
+    await expect(footer.getByRole('link', { name: 'terms of service' })).toBeVisible()
 
     expect(
       consoleMessages,

@@ -67,9 +67,9 @@ export default function PrivacyPage() {
               </li>
             </ul>
             <p className="text-[13px] font-mono text-text-primary leading-[1.8]">
-              Analytics cookies are not currently active. If we introduce them in the future, this
-              policy will be updated and you will be asked for consent before any analytics cookie
-              is set.
+              If you accept analytics cookies, Google Analytics 4 may set additional cookies to
+              measure usage. You will always be asked for consent before any analytics cookie is
+              set. You can withdraw consent at any time by clearing your cookies.
             </p>
           </section>
 
@@ -82,6 +82,26 @@ export default function PrivacyPage() {
                 <span className="text-[#5a6896]">{'— '}</span>Vercel (hosting and CDN) — delivers
                 the site and may process standard request data such as IP address and browser
                 information per their own privacy policy.
+              </li>
+              <li>
+                <span className="text-[#5a6896]">{'— '}</span>Google Analytics 4 (analytics) — if
+                you accept analytics cookies, Google may process page view data including your
+                anonymised IP address per their{' '}
+                <a
+                  href="https://policies.google.com/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-accent-violet hover:underline"
+                >
+                  privacy policy
+                </a>
+                . You can opt out at any time by clearing your cookies and choosing
+                &ldquo;functional only&rdquo; when the banner appears again.
+              </li>
+              <li>
+                <span className="text-[#5a6896]">{'— '}</span>Vercel Web Analytics (usage metrics)
+                — collects anonymised page view counts. No cookies. No personal data. Operates
+                within GDPR without consent per Vercel&apos;s privacy policy.
               </li>
             </ul>
           </section>
@@ -158,7 +178,7 @@ export default function PrivacyPage() {
             <h2 className="text-[11px] font-mono text-text-secondary uppercase tracking-[.14em]">
               7. last updated
             </h2>
-            <p className="text-[13px] font-mono text-text-primary leading-[1.8]">2026-05-01</p>
+            <p className="text-[13px] font-mono text-text-primary leading-[1.8]">2026-05-02</p>
           </section>
         </article>
         <Footer />

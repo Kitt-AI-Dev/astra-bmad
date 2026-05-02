@@ -38,7 +38,7 @@ export function CookieBanner() {
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-border px-6 py-4">
       <div className="max-w-[700px] mx-auto flex flex-wrap items-center gap-4">
         <p className="text-[13px] font-mono text-text-secondary flex-1 min-w-0">
-          {'// 404tune uses functional cookies to remember your sign and role. Analytics cookies are optional and not yet active. '}
+          {'// 404tune uses functional cookies to remember your sign and role. Analytics cookies are optional. '}
           <Link href="/privacy" className="text-accent-violet hover:underline">
             learn more
           </Link>

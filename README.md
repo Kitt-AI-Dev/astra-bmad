@@ -138,6 +138,7 @@ Vercel hosts the website. It connects directly to your GitHub repository and aut
 | `ADMIN_EMAIL` | Your email address — this is who can log in to the admin panel |
 | `RESEND_API_KEY` | From Step 5 |
 | `BATCH_MONTH_THEME` | Short creative theme for the current month's readings, e.g. `Autumn introspection — letting go of what no longer serves.` Update this before each monthly batch run |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | *(Optional)* Your Google Analytics 4 measurement ID (e.g. `G-XXXXXXXXXX`). Leave blank to disable GA. Visitors must accept analytics cookies before any GA data is collected. |
 
 3. After adding all variables, go to **Deployments**, find the most recent deployment, click the three-dot menu, and choose **Redeploy**. This time it should succeed.
 
