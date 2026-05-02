@@ -19,7 +19,7 @@ export async function generateMetadata({
   params: Promise<{ sign: string; role: string }>
 }): Promise<Metadata> {
   const { sign, role } = await params
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://404tune.app'
+  const base = process.env.NEXT_PUBLIC_APP_URL!
   const signLabel = formatSign(sign)
   const roleLabel = formatRole(role)
 
@@ -79,7 +79,7 @@ export default async function SignRolePage({
   }
 
   const today = new Date().toISOString().slice(0, 10)
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://404tune.app'
+  const base = process.env.NEXT_PUBLIC_APP_URL!
 
   let reading = null
   try {
@@ -112,6 +112,15 @@ export default async function SignRolePage({
     datePublished: today,
   }
 
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: '404tune', item: `${base}/` },
+      { '@type': 'ListItem', position: 2, name: `${signLabel} ${roleLabel}`, item: `${base}/${sign}/${role}` },
+    ],
+  }
+
   return (
     <main className="min-h-screen bg-background px-6 pt-4 pb-10">
       <div id="reading" className="max-w-[700px] mx-auto">
@@ -128,6 +137,10 @@ export default async function SignRolePage({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(creativeWorkSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
         />
         <Footer />
       </div>

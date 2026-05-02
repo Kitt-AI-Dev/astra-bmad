@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { createPublicClient } from '@/lib/supabase-server-public'
+import { TEAM_ARCHETYPES } from '@/lib/constants'
 import { Header } from '@/components/Header'
 import { ShareFooter } from '@/components/ShareFooter'
 import { TeamReadingCard } from '@/components/TeamReadingCard'
@@ -7,27 +8,71 @@ import { Footer } from '@/components/Footer'
 
 export const revalidate = false
 
+function truncateDescription(text: string, maxLength = 155): string {
+  const prose = text.replace(/\s+/g, ' ').trim()
+  return prose.length > maxLength ? prose.slice(0, maxLength) + '…' : prose
+}
+
+function extractTeamDescription(content: string): string | null {
+  try {
+    const parsed = JSON.parse(content) as { body?: unknown }
+    if (typeof parsed.body === 'string') return truncateDescription(parsed.body)
+  } catch {
+    // fall through to legacy markdown fallback
+  }
+
+  const firstParagraph = content
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .find((block) => block && !block.startsWith('#') && !block.startsWith('**'))
+
+  return firstParagraph ? truncateDescription(firstParagraph) : null
+}
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://404tune.app'
+  const base = process.env.NEXT_PUBLIC_APP_URL!
+
+  let title = 'Team Horoscope — 404tune'
+  let description = "Your team's daily reading from 404tune"
+
+  try {
+    const supabase = createPublicClient()
+    const { data } = await supabase
+      .from('team_readings')
+      .select('slot, content, suppressed')
+      .eq('id', id)
+      .eq('suppressed', false)
+      .maybeSingle()
+
+    if (data) {
+      const archetype = TEAM_ARCHETYPES[data.slot]
+      if (archetype) title = `${archetype} — 404tune`
+      description = extractTeamDescription(data.content) ?? description
+    }
+  } catch (err) {
+    console.warn('[team/[id] generateMetadata] failed:', err)
+  }
+
   return {
-    title: 'Team Horoscope — 404tune',
-    description: "Your team's daily reading from 404tune",
+    title,
+    description,
     alternates: { canonical: `${base}/team/${id}` },
     openGraph: {
-      title: 'Team Horoscope — 404tune',
-      description: "Your team's daily reading from 404tune",
+      title,
+      description,
       url: `${base}/team/${id}`,
       siteName: '404tune',
       type: 'article',
     },
     twitter: {
       card: 'summary_large_image',
-      title: 'Team Horoscope — 404tune',
+      title,
+      description,
     },
   }
 }
@@ -38,7 +83,7 @@ export default async function TeamReadingPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://404tune.app'
+  const base = process.env.NEXT_PUBLIC_APP_URL!
 
   const supabase = createPublicClient()
   const { data: reading, error } = await supabase

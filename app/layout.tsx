@@ -14,11 +14,13 @@ export const metadata: Metadata = {
   description: "Your daily horoscope for your sign × IT role",
 };
 
+const base = process.env.NEXT_PUBLIC_APP_URL!
+
 const websiteSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: '404tune',
-  url: 'https://404tune.dev',
+  url: `${base}/`,
   description: 'Daily horoscope for your zodiac sign and IT role',
 }
 

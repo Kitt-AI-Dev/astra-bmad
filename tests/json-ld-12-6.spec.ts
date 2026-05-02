@@ -37,7 +37,7 @@ test.describe('JSON-LD structured data (12.6)', () => {
     expect(schema).not.toBeNull()
     expect(schema!['@context']).toBe('https://schema.org')
     expect(schema!.name).toBe('404tune')
-    expect(schema!.url).toBe('https://404tune.dev')
+    expect(schema!.url).toBe('https://404tune.dev/')
   })
 
   test('date page has WebSite JSON-LD from layout', async ({ page }) => {
