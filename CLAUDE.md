@@ -24,6 +24,7 @@ Every story or feature change is not done until a Playwright test covering the c
 - localhost connects to production Supabase — real auth, real RLS, real data
 - Tests must run against `localhost:3000`, not against mocks or stubs
 - `tsc --noEmit` and `eslint` passing is necessary but not sufficient
+- `pnpm build` must pass — type checking and lint do not catch prerender errors (e.g. `useSearchParams()` without Suspense, missing server component exports)
 - The Playwright test is the final gate before marking any story `done`
 
 ## Console log requirement (mandatory, not optional)

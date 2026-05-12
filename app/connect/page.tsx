@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { useState, useEffect, useCallback, useSyncExternalStore } from 'react'
+import { Suspense, useState, useEffect, useCallback, useSyncExternalStore } from 'react'
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
 import { SIGNS, ROLES } from '@/lib/constants'
@@ -28,7 +28,7 @@ type ApiResult =
   | { kind: 'success'; sign: Sign; role: Role }
   | { kind: 'error'; message: string }
 
-export default function ConnectPage() {
+function ConnectPageContent() {
   const searchParams = useSearchParams()
   const rawTid = searchParams.get('tid')
   const validTid = isValidTid(rawTid) ? rawTid : null
@@ -205,5 +205,13 @@ export default function ConnectPage() {
         <Footer />
       </div>
     </main>
+  )
+}
+
+export default function ConnectPage() {
+  return (
+    <Suspense>
+      <ConnectPageContent />
+    </Suspense>
   )
 }
