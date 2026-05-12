@@ -108,7 +108,35 @@ Resend sends you an email when batch jobs complete.
 
 ---
 
-## Step 6 — Deploy to Vercel
+## Step 6 — Create a Telegram Bot (optional)
+
+You can skip this step entirely if you don't want Telegram delivery. All other features work without it.
+
+1. Open Telegram and search for **@BotFather**.
+2. Send `/newbot` and follow the prompts (choose a name and username for your bot).
+3. BotFather will give you a **bot token** that looks like `123456789:ABCdefGHI...` — copy it.
+4. Set `TELEGRAM_BOT_TOKEN` to that value in Vercel (Step 7) and in your local `.env.local`.
+5. Generate a webhook secret: run `openssl rand -hex 32` in your terminal and copy the output.
+6. Set `TELEGRAM_WEBHOOK_SECRET` to that value in Vercel (Step 7) and in your local `.env.local`.
+7. **After your first successful Vercel deploy**, register the webhook by running:
+
+   ```bash
+   curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "url": "https://<YOUR_APP_URL>/api/telegram/webhook",
+       "secret_token": "<YOUR_TELEGRAM_WEBHOOK_SECRET>"
+     }'
+   ```
+
+   Replace `<YOUR_BOT_TOKEN>`, `<YOUR_APP_URL>`, and `<YOUR_TELEGRAM_WEBHOOK_SECRET>` with your actual values.
+   Telegram will respond with `{"ok":true,"result":true,"description":"Webhook was set"}`.
+
+8. Open your bot in Telegram and send `/start` to verify it works.
+
+---
+
+## Step 7 — Deploy to Vercel
 
 Vercel hosts the website. It connects directly to your GitHub repository and automatically deploys whenever you push changes.
 
@@ -139,12 +167,14 @@ Vercel hosts the website. It connects directly to your GitHub repository and aut
 | `RESEND_API_KEY` | From Step 5 |
 | `BATCH_MONTH_THEME` | Short creative theme for the current month's readings, e.g. `Autumn introspection — letting go of what no longer serves.` Update this before each monthly batch run |
 | `NEXT_PUBLIC_GA_MEASUREMENT_ID` | *(Optional)* Your Google Analytics 4 measurement ID (e.g. `G-XXXXXXXXXX`). Leave blank to disable GA. Visitors must accept analytics cookies before any GA data is collected. |
+| `TELEGRAM_BOT_TOKEN` | *(Optional)* From Step 6 — BotFather gives you this after `/newbot`. Leave blank to disable the Telegram bot. |
+| `TELEGRAM_WEBHOOK_SECRET` | *(Optional)* Random 32+ character string you generate (e.g. `openssl rand -hex 32`). Must match what you pass to `setWebhook`. Required if `TELEGRAM_BOT_TOKEN` is set. |
 
 3. After adding all variables, go to **Deployments**, find the most recent deployment, click the three-dot menu, and choose **Redeploy**. This time it should succeed.
 
 ---
 
-## Step 7 — Generate the first month's readings
+## Step 8 — Generate the first month's readings
 
 Now comes the fun part. You need to run the AI batch job to generate horoscope readings.
 
@@ -168,7 +198,7 @@ After retrieve completes, your readings will be live at `https://your-app.vercel
 
 ---
 
-## Step 8 — Verify everything is working
+## Step 9 — Verify everything is working
 
 Visit these URLs on your deployed app and confirm they load correctly:
 
@@ -256,7 +286,7 @@ pnpm dev
 ## Troubleshooting
 
 **The app deployed but pages show errors**
-Check Vercel's **Functions** tab for error logs. Most issues are missing environment variables — double-check all variables from Step 6 are set.
+Check Vercel's **Functions** tab for error logs. Most issues are missing environment variables — double-check all variables from Step 7 are set.
 
 **The batch job failed**
 Open the Vercel dashboard → **Logs** (or **Functions**) and filter on `/api/admin/batches/submit`, `/api/admin/batches/retrieve`, or `/api/cron/batch-*` to read the error. The most common cause is a missing environment variable.

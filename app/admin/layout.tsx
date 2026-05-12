@@ -23,6 +23,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         >
           {'// team readings'}
         </Link>
+        <Link
+          href="/admin/telegram"
+          className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+        >
+          {'// telegram'}
+        </Link>
       </nav>
       <main className="p-6">{children}</main>
       <Toaster position="bottom-right" />

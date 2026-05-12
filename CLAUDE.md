@@ -14,6 +14,9 @@ When converting any audit output (SEO audit, security audit, etc.) to stories, e
 ## Asset integrity before touching build pipeline
 Before working with fonts, images, or binary assets, verify file integrity. Use `file <path>` to confirm the file type matches its extension. An HTML file named `.ttf` is not a font.
 
+## New environment variables must be documented in the README in the same story
+When any story introduces a new environment variable, the README env vars table (Step 6) must be updated as part of that same story — not after. A story that ships a new env var without a corresponding README entry is not done.
+
 # Definition of Done
 
 Every story or feature change is not done until a Playwright test covering the changed golden path passes against `localhost:3000`.

@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 
+// Load env vars so test-side code (e.g. Supabase admin client) has access to them
+try { process.loadEnvFile('.env') } catch { /* file absent in CI — env vars injected externally */ }
+
 export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
