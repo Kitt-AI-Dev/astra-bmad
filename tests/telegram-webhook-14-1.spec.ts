@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import { handleTelegramUpdate, type TelegramWebhookDeps } from '@/lib/telegram-webhook'
+import { handleTelegramUpdate, type TelegramWebhookDeps, type SubscriberState } from '@/lib/telegram-webhook'
 
 const WEBHOOK_URL = 'http://localhost:3000/api/telegram/webhook'
 const TEST_CHAT_ID = 999_999_888_777
@@ -20,26 +20,42 @@ function collectConsole(page: { on: (event: 'console', handler: (msg: { type(): 
   return messages
 }
 
-function createMockDeps(dbErrorMessage?: string) {
+function createMockDeps(
+  dbErrorMessage?: string,
+  initialState: SubscriberState = { sign: null, role: null, timezone_offset: null }
+) {
   const messages: TelegramMessageCall[] = []
   const callbackAnswers: string[] = []
   const writes: DbWrite[] = []
+  // Mutable state — updates from `upsert`/`update` writes are applied so that
+  // `getSubscriberState` returns the post-write view (matching real DB semantics).
+  const state: SubscriberState = { ...initialState }
+
+  function applyWrite(values: object) {
+    const v = values as Partial<SubscriberState>
+    if ('sign' in v && v.sign !== undefined) state.sign = v.sign ?? null
+    if ('role' in v && v.role !== undefined) state.role = v.role ?? null
+    if ('timezone_offset' in v && v.timezone_offset !== undefined) {
+      state.timezone_offset = v.timezone_offset ?? null
+    }
+  }
 
   const result = { error: dbErrorMessage ? { message: dbErrorMessage } : null }
   const deps: TelegramWebhookDeps = {
-    appUrl: 'http://localhost:3000',
     async createClient() {
       return {
         from(table: string) {
           return {
             async upsert(values: object) {
               writes.push({ table, operation: 'upsert', values })
+              if (!dbErrorMessage) applyWrite(values)
               return result
             },
             update(values: object) {
               return {
                 async eq(column: string, value: unknown) {
                   writes.push({ table, operation: 'update', values, column, value })
+                  if (!dbErrorMessage) applyWrite(values)
                   return result
                 },
               }
@@ -54,9 +70,12 @@ function createMockDeps(dbErrorMessage?: string) {
     async answerCallbackQuery(callbackQueryId) {
       callbackAnswers.push(callbackQueryId)
     },
+    async getSubscriberState() {
+      return { ...state }
+    },
   }
 
-  return { deps, messages, callbackAnswers, writes }
+  return { deps, messages, callbackAnswers, writes, state }
 }
 
 test.describe('POST /api/telegram/webhook', () => {
@@ -168,7 +187,7 @@ test.describe('POST /api/telegram/webhook', () => {
     expect(consoleMessages).toHaveLength(0)
   })
 
-  test('/start handler sends welcome reply with connect link and timezone keyboard', async ({ page }) => {
+  test('/start handler welcomes user and prompts for sign with sign keyboard', async ({ page }) => {
     const consoleMessages = collectConsole(page)
     const { deps, messages, writes } = createMockDeps()
 
@@ -183,23 +202,127 @@ test.describe('POST /api/telegram/webhook', () => {
       values: { chat_id: TEST_CHAT_ID, active: true },
     })
     expect(messages).toHaveLength(1)
-    expect(messages[0].text).toContain('http://localhost:3000/connect?tid=')
-    expect(messages[0].replyMarkup).toMatchObject({ inline_keyboard: expect.any(Array) })
+    expect(messages[0].text).toContain('// 404tune — daily horoscope for your IT life')
+    expect(messages[0].text).toContain('// pick your sign:')
+    const keyboard = messages[0].replyMarkup as { inline_keyboard: { text: string; callback_data: string }[][] }
+    expect(keyboard.inline_keyboard[0][0].callback_data).toMatch(/^sign:/)
     expect(consoleMessages).toHaveLength(0)
   })
 
-  test('timezone handler acknowledges callback and sends confirmation reply', async ({ page }) => {
+  test('/start with full payload (tz + sign + role) sends all-set reply with no keyboard', async ({ page }) => {
+    const consoleMessages = collectConsole(page)
+    const { deps, messages, writes } = createMockDeps()
+
+    await handleTelegramUpdate(
+      { message: { chat: { id: TEST_CHAT_ID }, text: '/start tz_120_aries_software-engineer' } },
+      deps
+    )
+
+    expect(writes).toContainEqual({
+      table: 'telegram_subscribers',
+      operation: 'upsert',
+      values: { chat_id: TEST_CHAT_ID, active: true, timezone_offset: 120, sign: 'aries', role: 'software-engineer' },
+    })
+    expect(messages).toHaveLength(1)
+    expect(messages[0].text).toContain('// 404tune — all set.')
+    expect(messages[0].text).toContain('Aries × Software Engineer')
+    expect(messages[0].text).toContain('UTC+2')
+    expect(messages[0].replyMarkup).toBeUndefined()
+    expect(consoleMessages).toHaveLength(0)
+  })
+
+  test('/start with tz-only payload prompts for sign (tz already saved)', async ({ page }) => {
+    const consoleMessages = collectConsole(page)
+    const { deps, messages } = createMockDeps()
+
+    await handleTelegramUpdate(
+      { message: { chat: { id: TEST_CHAT_ID }, text: '/start tz_60' } },
+      deps
+    )
+
+    expect(messages).toHaveLength(1)
+    expect(messages[0].text).toContain('// pick your sign:')
+    const keyboard = messages[0].replyMarkup as { inline_keyboard: { text: string; callback_data: string }[][] }
+    expect(keyboard.inline_keyboard[0][0].callback_data).toMatch(/^sign:/)
+    expect(consoleMessages).toHaveLength(0)
+  })
+
+  test('sign callback updates DB and prompts for role', async ({ page }) => {
     const consoleMessages = collectConsole(page)
     const { deps, messages, callbackAnswers, writes } = createMockDeps()
 
     await handleTelegramUpdate(
-      {
-        callback_query: {
-          id: 'test-cb-id-123',
-          from: { id: TEST_CHAT_ID },
-          data: 'tz:60',
-        },
-      },
+      { callback_query: { id: 'cb-sign', from: { id: TEST_CHAT_ID }, data: 'sign:aries' } },
+      deps
+    )
+
+    expect(writes).toContainEqual({
+      table: 'telegram_subscribers',
+      operation: 'update',
+      values: { sign: 'aries' },
+      column: 'chat_id',
+      value: TEST_CHAT_ID,
+    })
+    expect(callbackAnswers).toEqual(['cb-sign'])
+    expect(messages).toHaveLength(1)
+    expect(messages[0].text).toContain('// pick your role:')
+    const keyboard = messages[0].replyMarkup as { inline_keyboard: { callback_data: string }[][] }
+    expect(keyboard.inline_keyboard[0][0].callback_data).toMatch(/^role:/)
+    expect(consoleMessages).toHaveLength(0)
+  })
+
+  test('role callback updates DB and prompts for timezone (when tz not set)', async ({ page }) => {
+    const consoleMessages = collectConsole(page)
+    const { deps, messages, writes } = createMockDeps(undefined, {
+      sign: 'aries', role: null, timezone_offset: null,
+    })
+
+    await handleTelegramUpdate(
+      { callback_query: { id: 'cb-role', from: { id: TEST_CHAT_ID }, data: 'role:devops' } },
+      deps
+    )
+
+    expect(writes).toContainEqual({
+      table: 'telegram_subscribers',
+      operation: 'update',
+      values: { role: 'devops' },
+      column: 'chat_id',
+      value: TEST_CHAT_ID,
+    })
+    expect(messages).toHaveLength(1)
+    expect(messages[0].text).toContain('// pick your timezone:')
+    const keyboard = messages[0].replyMarkup as { inline_keyboard: { callback_data: string }[][] }
+    expect(keyboard.inline_keyboard[0][0].callback_data).toMatch(/^tz:/)
+    expect(consoleMessages).toHaveLength(0)
+  })
+
+  test('role callback completes flow when timezone already set', async ({ page }) => {
+    const consoleMessages = collectConsole(page)
+    const { deps, messages } = createMockDeps(undefined, {
+      sign: 'aries', role: null, timezone_offset: 120,
+    })
+
+    await handleTelegramUpdate(
+      { callback_query: { id: 'cb-role', from: { id: TEST_CHAT_ID }, data: 'role:devops' } },
+      deps
+    )
+
+    expect(messages).toHaveLength(1)
+    expect(messages[0].text).toContain('// 404tune — all set.')
+    expect(messages[0].text).toContain('Aries × Devops')
+    expect(messages[0].text).toContain('UTC+2')
+    expect(messages[0].replyMarkup).toBeUndefined()
+    expect(consoleMessages).toHaveLength(0)
+  })
+
+  test('timezone callback completes flow when sign+role already set', async ({ page }) => {
+    const consoleMessages = collectConsole(page)
+    const { deps, messages, callbackAnswers, writes } = createMockDeps(undefined, {
+      sign: 'aries', role: 'devops', timezone_offset: null,
+    })
+
+    await handleTelegramUpdate(
+      { callback_query: { id: 'cb-tz', from: { id: TEST_CHAT_ID }, data: 'tz:60' } },
       deps
     )
 
@@ -210,13 +333,14 @@ test.describe('POST /api/telegram/webhook', () => {
       column: 'chat_id',
       value: TEST_CHAT_ID,
     })
-    expect(callbackAnswers).toEqual(['test-cb-id-123'])
+    expect(callbackAnswers).toEqual(['cb-tz'])
     expect(messages).toHaveLength(1)
-    expect(messages[0].text).toContain('// timezone set to UTC+1.')
+    expect(messages[0].text).toContain('// 404tune — all set.')
+    expect(messages[0].text).toContain('UTC+1')
     expect(consoleMessages).toHaveLength(0)
   })
 
-  test('malformed timezone callback is rejected without subscriber update or confirmation reply', async ({ page }) => {
+  test('malformed timezone callback is rejected without subscriber update', async ({ page }) => {
     const consoleMessages = collectConsole(page)
     const { deps, messages, callbackAnswers, writes } = createMockDeps()
     const warnings: unknown[][] = []
@@ -227,13 +351,7 @@ test.describe('POST /api/telegram/webhook', () => {
 
     try {
       await handleTelegramUpdate(
-        {
-          callback_query: {
-            id: 'test-cb-id-malformed',
-            from: { id: TEST_CHAT_ID },
-            data: 'tz:60junk',
-          },
-        },
+        { callback_query: { id: 'cb-bad-tz', from: { id: TEST_CHAT_ID }, data: 'tz:60junk' } },
         deps
       )
     } finally {
@@ -241,10 +359,64 @@ test.describe('POST /api/telegram/webhook', () => {
     }
 
     expect(writes).toHaveLength(0)
-    expect(callbackAnswers).toEqual(['test-cb-id-malformed'])
+    expect(callbackAnswers).toEqual(['cb-bad-tz'])
     expect(messages).toHaveLength(0)
     expect(warnings).toEqual([
       ['[telegram/webhook] invalid timezone offset received:', 'tz:60junk'],
+    ])
+    expect(consoleMessages).toHaveLength(0)
+  })
+
+  test('malformed sign callback is rejected without subscriber update', async ({ page }) => {
+    const consoleMessages = collectConsole(page)
+    const { deps, messages, callbackAnswers, writes } = createMockDeps()
+    const warnings: unknown[][] = []
+    const originalWarn = console.warn
+    console.warn = (...args: unknown[]) => {
+      warnings.push(args)
+    }
+
+    try {
+      await handleTelegramUpdate(
+        { callback_query: { id: 'cb-bad-sign', from: { id: TEST_CHAT_ID }, data: 'sign:not-a-sign' } },
+        deps
+      )
+    } finally {
+      console.warn = originalWarn
+    }
+
+    expect(writes).toHaveLength(0)
+    expect(callbackAnswers).toEqual(['cb-bad-sign'])
+    expect(messages).toHaveLength(0)
+    expect(warnings).toEqual([
+      ['[telegram/webhook] invalid sign received:', 'sign:not-a-sign'],
+    ])
+    expect(consoleMessages).toHaveLength(0)
+  })
+
+  test('malformed role callback is rejected without subscriber update', async ({ page }) => {
+    const consoleMessages = collectConsole(page)
+    const { deps, messages, callbackAnswers, writes } = createMockDeps()
+    const warnings: unknown[][] = []
+    const originalWarn = console.warn
+    console.warn = (...args: unknown[]) => {
+      warnings.push(args)
+    }
+
+    try {
+      await handleTelegramUpdate(
+        { callback_query: { id: 'cb-bad-role', from: { id: TEST_CHAT_ID }, data: 'role:not-a-role' } },
+        deps
+      )
+    } finally {
+      console.warn = originalWarn
+    }
+
+    expect(writes).toHaveLength(0)
+    expect(callbackAnswers).toEqual(['cb-bad-role'])
+    expect(messages).toHaveLength(0)
+    expect(warnings).toEqual([
+      ['[telegram/webhook] invalid role received:', 'role:not-a-role'],
     ])
     expect(consoleMessages).toHaveLength(0)
   })

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { sendMessage, answerCallbackQuery } from '@/lib/telegram'
-import { handleTelegramUpdate, type TelegramUpdate } from '@/lib/telegram-webhook'
+import {
+  handleTelegramUpdate,
+  type TelegramUpdate,
+  type SubscriberState,
+} from '@/lib/telegram-webhook'
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const secret = request.headers.get('X-Telegram-Bot-Api-Secret-Token')
@@ -23,7 +27,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       createClient,
       sendMessage,
       answerCallbackQuery,
-      appUrl: process.env.NEXT_PUBLIC_APP_URL!,
+      getSubscriberState: async (chatId: number): Promise<SubscriberState | null> => {
+        const supabase = await createClient()
+        const { data } = await supabase
+          .from('telegram_subscribers')
+          .select('sign, role, timezone_offset')
+          .eq('chat_id', chatId)
+          .maybeSingle()
+        return (data as SubscriberState | null) ?? null
+      },
     })
   } catch (err) {
     // Log but still return 200 — if we return 5xx Telegram will retry indefinitely

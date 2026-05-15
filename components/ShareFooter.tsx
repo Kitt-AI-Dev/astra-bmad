@@ -1,15 +1,28 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useSyncExternalStore } from 'react'
 import { Send } from 'lucide-react'
+import { getPrefs } from '@/lib/cookies'
 
 export function ShareFooter({ url, telegramBotUrl }: { url: string; telegramBotUrl?: string }) {
   const [copied, setCopied] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const telegramHref = telegramBotUrl
-    ? `${telegramBotUrl}?start=tz_${-new Date().getTimezoneOffset()}`
-    : undefined
+  // Computed on the client only — server snapshot is null to avoid hydration mismatch.
+  // Returns a primitive string so Object.is comparison is stable between renders.
+  const telegramHref = useSyncExternalStore(
+    () => () => {},
+    (): string | null => {
+      if (!telegramBotUrl) return null
+      const offset = -new Date().getTimezoneOffset()
+      const prefs = getPrefs()
+      const payload = prefs
+        ? `tz_${offset}_${prefs.sign}_${prefs.role}`
+        : `tz_${offset}`
+      return `${telegramBotUrl}?start=${payload}`
+    },
+    (): null => null
+  )
 
   useEffect(() => {
     return () => {
