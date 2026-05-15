@@ -1,13 +1,15 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { clearPrefs } from '@/lib/cookies'
+import { Send } from 'lucide-react'
 
-export function ShareFooter({ url, changeHref }: { url: string; changeHref?: string }) {
+export function ShareFooter({ url, telegramBotUrl }: { url: string; telegramBotUrl?: string }) {
   const [copied, setCopied] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const router = useRouter()
+
+  const telegramHref = telegramBotUrl
+    ? `${telegramBotUrl}?start=tz_${-new Date().getTimezoneOffset()}`
+    : undefined
 
   useEffect(() => {
     return () => {
@@ -37,13 +39,16 @@ export function ShareFooter({ url, changeHref }: { url: string; changeHref?: str
         >
           {copied ? '✓ link copied' : '$ share --copy-link'}
         </button>
-        {changeHref && (
-          <button
-            onClick={() => { clearPrefs(); router.push(changeHref) }}
-            className="ml-auto text-[13px] font-mono text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+        {telegramHref && (
+          <a
+            href={telegramHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto flex items-center gap-2 text-[12px] font-mono text-accent-gold border border-accent-gold px-4 py-2 rounded hover:bg-accent-gold hover:text-bg transition-colors"
           >
-            {'[← change identity]'}
-          </button>
+            <Send size={13} strokeWidth={1.5} />
+            {'$ subscribe'}
+          </a>
         )}
       </div>
     </div>

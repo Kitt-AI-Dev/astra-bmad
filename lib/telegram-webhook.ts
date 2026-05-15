@@ -34,11 +34,13 @@ export interface TelegramWebhookDeps {
   appUrl: string
 }
 
-const WELCOME_MESSAGE = (connectUrl: string) =>
+const WELCOME_MESSAGE = (connectUrl: string, tzLabel?: string) =>
   `<b>// 404tune — daily horoscope for your IT life</b>\n\n` +
   `readings will arrive at 08:00 your time once you connect your sign and role.\n\n` +
   `→ <a href="${connectUrl}">connect your identity</a>\n\n` +
-  `then pick your timezone below so we know when to deliver your reading.`
+  (tzLabel
+    ? `timezone detected as <code>${tzLabel}</code>. tap below to change if needed.`
+    : `pick your timezone below so we know when to deliver your reading.`)
 
 const TZ_CONFIRMED_MESSAGE = (label: string) =>
   `<code>// timezone set to ${label}. readings will land at 08:00 your time.</code>`
@@ -52,14 +54,22 @@ function assertDbOk(result: DbResult, action: string): void {
   }
 }
 
-function parseTimezoneOffset(data: string): number | null {
-  const offsetStr = data.slice(3)
+function validateOffset(offsetStr: string): number | null {
   if (!/^-?\d+$/.test(offsetStr)) return null
-
   const offset = Number(offsetStr)
   if (!Number.isInteger(offset) || offset < -720 || offset > 840) return null
-
   return offset
+}
+
+// Parses callback_data format: 'tz:-300'
+function parseTimezoneOffset(data: string): number | null {
+  return validateOffset(data.slice(3))
+}
+
+// Parses /start payload format: 'tz_-300'
+function parseStartPayload(payload: string): number | null {
+  if (!payload.startsWith('tz_')) return null
+  return validateOffset(payload.slice(3))
 }
 
 function formatTimezoneLabel(offset: number): string {
@@ -87,17 +97,24 @@ async function handleMessage(message: TelegramMessage, deps: TelegramWebhookDeps
   const chatId = BigInt(message.chat.id)
   const text = message.text ?? ''
 
-  if (text === '/start') {
+  if (text === '/start' || text.startsWith('/start ')) {
+    const payload = text.slice('/start'.length).trim()
+    const timezoneOffset = parseStartPayload(payload)
+
+    const upsertData: Record<string, unknown> = { chat_id: Number(chatId), active: true }
+    if (timezoneOffset !== null) upsertData.timezone_offset = timezoneOffset
+
     const supabase = await deps.createClient()
     const result = await supabase
       .from('telegram_subscribers')
-      .upsert({ chat_id: Number(chatId), active: true }, { onConflict: 'chat_id' })
+      .upsert(upsertData, { onConflict: 'chat_id' })
     assertDbOk(result, '/start upsert')
 
     const tid = encodeTid(chatId)
     const connectUrl = `${deps.appUrl}/connect?tid=${tid}`
+    const tzLabel = timezoneOffset !== null ? formatTimezoneLabel(timezoneOffset) : undefined
 
-    await deps.sendMessage(chatId, WELCOME_MESSAGE(connectUrl), TIMEZONE_KEYBOARD)
+    await deps.sendMessage(chatId, WELCOME_MESSAGE(connectUrl, tzLabel), TIMEZONE_KEYBOARD)
     return
   }
 

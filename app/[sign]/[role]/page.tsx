@@ -131,22 +131,14 @@ export default async function SignRolePage({
         <DateGuard serverDate={today} sign={sign} role={role}>
           <div className="animate-in fade-in duration-150">
             <ReadingCard reading={reading} nullVariant="not-published" />
-            {reading && <ShareFooter url={`${base}/${sign}/${role}/${reading.date}`} changeHref="/" />}
+            {reading && (
+              <ShareFooter
+                url={`${base}/${sign}/${role}/${reading.date}`}
+                telegramBotUrl={process.env.NEXT_PUBLIC_TELEGRAM_BOT_URL}
+              />
+            )}
           </div>
         </DateGuard>
-        {process.env.NEXT_PUBLIC_TELEGRAM_BOT_URL && (
-          <p className="text-[11px] font-mono text-text-secondary mt-8">
-            {'// get this delivered daily →'}{' '}
-            <a
-              href={process.env.NEXT_PUBLIC_TELEGRAM_BOT_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-text-primary transition-colors"
-            >
-              {'@a404tuneBot on Telegram'}
-            </a>
-          </p>
-        )}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(creativeWorkSchema) }}
