@@ -169,6 +169,7 @@ Vercel hosts the website. It connects directly to your GitHub repository and aut
 | `NEXT_PUBLIC_GA_MEASUREMENT_ID` | *(Optional)* Your Google Analytics 4 measurement ID (e.g. `G-XXXXXXXXXX`). Leave blank to disable GA. Visitors must accept analytics cookies before any GA data is collected. |
 | `TELEGRAM_BOT_TOKEN` | *(Optional)* From Step 6 — BotFather gives you this after `/newbot`. Leave blank to disable the Telegram bot. |
 | `TELEGRAM_WEBHOOK_SECRET` | *(Optional)* Random 32+ character string you generate (e.g. `openssl rand -hex 32`). Must match what you pass to `setWebhook`. Required if `TELEGRAM_BOT_TOKEN` is set. |
+| `NEXT_PUBLIC_TELEGRAM_BOT_URL` | *(Optional)* Your bot's Telegram URL, e.g. `https://t.me/a404tuneBot`. When set, a "get this delivered daily" CTA appears on reading pages. Leave blank to hide it. |
 
 3. After adding all variables, go to **Deployments**, find the most recent deployment, click the three-dot menu, and choose **Redeploy**. This time it should succeed.
 
