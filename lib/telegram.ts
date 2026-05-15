@@ -1,9 +1,6 @@
-const BASE_URL = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`
+import { SIGNS, ROLES } from './constants'
 
-export function encodeTid(chatId: bigint): string {
-  // base64url encodes the chat ID string so it is URL-safe in the /connect link
-  return Buffer.from(String(chatId)).toString('base64url')
-}
+const BASE_URL = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`
 
 async function callTelegram(method: string, body: object): Promise<void> {
   const res = await fetch(`${BASE_URL}/${method}`, {
@@ -47,6 +44,24 @@ export async function sendTelegramMessage(
     body: JSON.stringify({ chat_id: Number(chatId), text, parse_mode: 'HTML' }),
   })
 }
+
+// Build a keyboard from a list of values, N per row.
+// callback_data format: '{prefix}:{value}' (e.g. 'sign:aries', 'role:devops')
+function buildKeyboard<T extends readonly string[]>(values: T, prefix: string, perRow: number) {
+  const rows: { text: string; callback_data: string }[][] = []
+  for (let i = 0; i < values.length; i += perRow) {
+    rows.push(
+      values.slice(i, i + perRow).map((v) => ({
+        text: v,
+        callback_data: `${prefix}:${v}`,
+      }))
+    )
+  }
+  return { inline_keyboard: rows }
+}
+
+export const SIGN_KEYBOARD = buildKeyboard(SIGNS, 'sign', 3)
+export const ROLE_KEYBOARD = buildKeyboard(ROLES, 'role', 2)
 
 // Inline keyboard covering UTC-12 to UTC+14 in common increments.
 // callback_data format: 'tz:{offset_in_minutes}'
