@@ -113,8 +113,9 @@ async function handleMessage(message: TelegramMessage, deps: TelegramWebhookDeps
     const tid = encodeTid(chatId)
     const connectUrl = `${deps.appUrl}/connect?tid=${tid}`
     const tzLabel = timezoneOffset !== null ? formatTimezoneLabel(timezoneOffset) : undefined
+    const keyboard = timezoneOffset === null ? TIMEZONE_KEYBOARD : undefined
 
-    await deps.sendMessage(chatId, WELCOME_MESSAGE(connectUrl, tzLabel), TIMEZONE_KEYBOARD)
+    await deps.sendMessage(chatId, WELCOME_MESSAGE(connectUrl, tzLabel), keyboard)
     return
   }
 
