@@ -2,75 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { sendTelegramMessage } from '@/lib/telegram'
 import { shouldDeactivateTelegramSubscriber } from '@/lib/telegram-push'
-import { stripJsonFence } from '@/lib/content'
+import { parseReading, buildMessage, type Subscriber } from '@/lib/telegram-push-message'
 
 export const maxDuration = 60
-
-type Subscriber = {
-  chat_id: number
-  sign: string
-  role: string
-  timezone_offset: number
-}
-
-type ParsedReading = {
-  prose: string | null
-  hasMetrics: boolean
-}
-
-function parseReading(rawContent: string): ParsedReading {
-  try {
-    const parsed = JSON.parse(stripJsonFence(rawContent)) as Record<string, unknown>
-    const prose = typeof parsed.general_reading === 'string' ? parsed.general_reading.trim() : null
-    // All-or-nothing — matches the website's metric-section render rule in
-    // components/ReadingCard.tsx. Avoids the case where the bot teases metrics
-    // but the website renders nothing for partial-metric anomalies.
-    const hasMetrics =
-      typeof parsed.deploy_luck === 'number' &&
-      typeof parsed.bug_risk_index === 'number' &&
-      typeof parsed.sprint_energy === 'number'
-    return { prose, hasMetrics }
-  } catch {
-    return { prose: null, hasMetrics: false }
-  }
-}
-
-const METRICS_TEASER = `// daily metrics\nDeploy Luck...`
-
-function buildMessage(
-  subscriber: Subscriber,
-  prose: string | null,
-  hasMetrics: boolean,
-  today: string,
-  baseUrl: string
-): string {
-  const { sign, role } = subscriber
-  const displaySign = sign.charAt(0).toUpperCase() + sign.slice(1)
-  const displayRole = role
-    .split('-')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ')
-
-  const header = `<b>// 404tune — ${displaySign} × ${displayRole} · ${today}</b>`
-
-  if (!prose) {
-    return `${header}\n\n// no reading available today — check back tomorrow.`
-  }
-
-  // Telegram auto-renders an OG link preview for the URL on its own line.
-  // The dated URL is used so the message stays valid if opened later.
-  const url = `${baseUrl}/${sign}/${role}/${today}`
-  const teaser = hasMetrics ? `${METRICS_TEASER}\n\n` : ''
-  let msg = `${header}\n\n${prose}\n\n${teaser}${url}`
-
-  // Hard cap at Telegram's 4096-char limit (very unlikely to hit with prose).
-  if (msg.length > 4096) {
-    const overhead = msg.length - prose.length
-    const room = 4096 - overhead - 1
-    msg = `${header}\n\n${prose.slice(0, room)}…\n\n${teaser}${url}`
-  }
-  return msg
-}
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('Authorization')
