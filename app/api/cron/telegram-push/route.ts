@@ -13,23 +13,34 @@ type Subscriber = {
   timezone_offset: number
 }
 
-type ReadingContent = {
-  general_reading?: string
-  [key: string]: unknown
+type ParsedReading = {
+  prose: string | null
+  hasMetrics: boolean
 }
 
-function extractGeneralReading(rawContent: string): string | null {
+function parseReading(rawContent: string): ParsedReading {
   try {
-    const parsed = JSON.parse(stripJsonFence(rawContent)) as ReadingContent
-    return typeof parsed.general_reading === 'string' ? parsed.general_reading.trim() : null
+    const parsed = JSON.parse(stripJsonFence(rawContent)) as Record<string, unknown>
+    const prose = typeof parsed.general_reading === 'string' ? parsed.general_reading.trim() : null
+    // All-or-nothing — matches the website's metric-section render rule in
+    // components/ReadingCard.tsx. Avoids the case where the bot teases metrics
+    // but the website renders nothing for partial-metric anomalies.
+    const hasMetrics =
+      typeof parsed.deploy_luck === 'number' &&
+      typeof parsed.bug_risk_index === 'number' &&
+      typeof parsed.sprint_energy === 'number'
+    return { prose, hasMetrics }
   } catch {
-    return null
+    return { prose: null, hasMetrics: false }
   }
 }
+
+const METRICS_TEASER = `// daily metrics\nDeploy Luck...`
 
 function buildMessage(
   subscriber: Subscriber,
   prose: string | null,
+  hasMetrics: boolean,
   today: string,
   baseUrl: string
 ): string {
@@ -49,13 +60,14 @@ function buildMessage(
   // Telegram auto-renders an OG link preview for the URL on its own line.
   // The dated URL is used so the message stays valid if opened later.
   const url = `${baseUrl}/${sign}/${role}/${today}`
-  let msg = `${header}\n\n${prose}\n\n${url}`
+  const teaser = hasMetrics ? `${METRICS_TEASER}\n\n` : ''
+  let msg = `${header}\n\n${prose}\n\n${teaser}${url}`
 
   // Hard cap at Telegram's 4096-char limit (very unlikely to hit with prose).
   if (msg.length > 4096) {
     const overhead = msg.length - prose.length
     const room = 4096 - overhead - 1
-    msg = `${header}\n\n${prose.slice(0, room)}…\n\n${url}`
+    msg = `${header}\n\n${prose.slice(0, room)}…\n\n${teaser}${url}`
   }
   return msg
 }
@@ -103,14 +115,16 @@ export async function GET(request: NextRequest) {
         .eq('suppressed', false)
         .maybeSingle()
 
-      const prose = reading ? extractGeneralReading(reading.content) : null
+      const { prose, hasMetrics } = reading
+        ? parseReading(reading.content)
+        : { prose: null, hasMetrics: false }
       if (reading && prose === null) {
         console.error(
           `[telegram-push] failed to extract general_reading for ${subscriber.sign}/${subscriber.role}`
         )
       }
 
-      const msg = buildMessage(subscriber, prose, today, baseUrl)
+      const msg = buildMessage(subscriber, prose, hasMetrics, today, baseUrl)
 
       const res = await sendTelegramMessage(subscriber.chat_id, msg)
 
