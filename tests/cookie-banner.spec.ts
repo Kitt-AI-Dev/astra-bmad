@@ -70,4 +70,32 @@ test.describe('Cookie banner', () => {
     await expect(page.getByText('functional only')).toBeVisible()
     expect(consoleErrors, `Unexpected console output on expired consent: ${consoleErrors.join('\n')}`).toHaveLength(0)
   })
+
+  test('mobile layout: banner body has full readable width, no horizontal scroll (15.1)', async ({ page }) => {
+    // iPhone 14 baseline viewport — reproduces the bug from the retro screenshot
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('http://localhost:3000/')
+
+    const body = page.locator('p').filter({ hasText: '// 404tune uses functional cookies' })
+    await expect(body).toBeVisible()
+
+    // Bug was: text wrapped one character per line because the button row
+    // consumed ~320px of a ~342px-after-padding viewport. Body width should
+    // now use the full available width (minus px-6 padding ~ 342px).
+    const bodyWidth = await body.evaluate((el) => el.getBoundingClientRect().width)
+    expect(bodyWidth, `banner body width was ${bodyWidth}px — expected > 200`).toBeGreaterThan(200)
+
+    // Page must not scroll horizontally
+    const overflow = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    }))
+    expect(overflow.scrollWidth, `horizontal scroll detected: ${overflow.scrollWidth} > ${overflow.clientWidth}`).toBeLessThanOrEqual(overflow.clientWidth)
+
+    // Buttons remain reachable
+    await expect(page.getByText('functional only')).toBeVisible()
+    await expect(page.getByText('accept all')).toBeVisible()
+
+    expect(consoleErrors, `Unexpected console output on mobile layout: ${consoleErrors.join('\n')}`).toHaveLength(0)
+  })
 })
