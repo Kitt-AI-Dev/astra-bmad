@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
-import { TEAM_ARCHETYPES } from '@/lib/constants'
 import { sendTelegramMessage } from '@/lib/telegram'
 import { shouldDeactivateTelegramSubscriber } from '@/lib/telegram-push'
-import { stripJsonFence } from '@/lib/content'
 
 export const maxDuration = 60
 
@@ -14,23 +12,11 @@ type Subscriber = {
   timezone_offset: number
 }
 
-type ReadingContent = {
-  general_reading: string
-  lucky_number: string | number
-  avoid: string
-  planetary_influence: string
-}
-
-type TeamContent = {
-  general_reading: string
-  [key: string]: unknown
-}
-
 function buildMessage(
   subscriber: Subscriber,
-  reading: { content: string } | null,
-  teamReading: { content: string; slot: number } | null,
-  today: string
+  hasReading: boolean,
+  today: string,
+  baseUrl: string
 ): string {
   const { sign, role } = subscriber
   const displaySign = sign.charAt(0).toUpperCase() + sign.slice(1)
@@ -39,49 +25,14 @@ function buildMessage(
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ')
 
-  let msg = `<b>🔭 404tune — ${today}</b>\n\n`
-
-  if (reading) {
-    let content: ReadingContent | null = null
-    try {
-      content = JSON.parse(stripJsonFence(reading.content)) as ReadingContent
-    } catch {
-      console.error(`[telegram-push] failed to parse reading content for ${sign}/${role}`)
-    }
-
-    if (content) {
-      msg += `<b>${displaySign} × ${displayRole}</b>\n`
-      msg += `${content.general_reading}\n\n`
-      msg += `<b>Lucky number:</b> ${content.lucky_number}  <b>Avoid:</b> ${content.avoid}\n`
-      msg += `<i>${content.planetary_influence}</i>\n`
-    } else {
-      msg += `<b>${displaySign} × ${displayRole}</b>\n`
-      msg += `<i>// no reading available today</i>\n`
-    }
-  } else {
-    msg += `<b>${displaySign} × ${displayRole}</b>\n`
-    msg += `<i>// no reading available today</i>\n`
+  if (!hasReading) {
+    return `<b>// 404tune — ${today}</b>\n\n// no reading available today — check back tomorrow.`
   }
 
-  if (teamReading) {
-    const archetype = TEAM_ARCHETYPES[teamReading.slot] ?? `Slot ${teamReading.slot}`
-    let tc: TeamContent | null = null
-    try {
-      tc = JSON.parse(stripJsonFence(teamReading.content)) as TeamContent
-    } catch {
-      console.error(`[telegram-push] failed to parse team reading content for slot ${teamReading.slot}`)
-    }
-    if (tc) {
-      msg += `\n<b>🏷️ Team — ${archetype}</b>\n`
-      msg += `${tc.general_reading}\n`
-    }
-  }
-
-  if (msg.length > 4096) {
-    msg = msg.slice(0, 4093) + '...'
-  }
-
-  return msg
+  // Telegram auto-renders an OG link preview for the URL on its own line.
+  // The dated URL is used so the message stays valid if opened later.
+  const url = `${baseUrl}/${sign}/${role}/${today}`
+  return `<b>// 404tune — ${displaySign} × ${displayRole} · ${today}</b>\n\n${url}`
 }
 
 export async function GET(request: NextRequest) {
@@ -90,6 +41,8 @@ export async function GET(request: NextRequest) {
   if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL!
 
   const currentHour = new Date().getUTCHours()
   const targetOffset = 480 - currentHour * 60
@@ -118,25 +71,14 @@ export async function GET(request: NextRequest) {
     try {
       const { data: reading } = await supabase
         .from('readings')
-        .select('content')
+        .select('id')
         .eq('sign', subscriber.sign)
         .eq('role', subscriber.role)
         .eq('date', today)
         .eq('suppressed', false)
-        .single()
+        .maybeSingle()
 
-      // Deterministic team slot — stable per user across all days
-      const slot = Number(BigInt(subscriber.chat_id) % BigInt(12)) + 1
-
-      const { data: teamReading } = await supabase
-        .from('team_readings')
-        .select('content, slot')
-        .eq('date', today)
-        .eq('slot', slot)
-        .eq('suppressed', false)
-        .single()
-
-      const msg = buildMessage(subscriber, reading ?? null, teamReading ?? null, today)
+      const msg = buildMessage(subscriber, reading !== null, today, baseUrl)
 
       const res = await sendTelegramMessage(subscriber.chat_id, msg)
 
