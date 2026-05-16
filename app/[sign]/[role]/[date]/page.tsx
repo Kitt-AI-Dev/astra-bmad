@@ -69,11 +69,21 @@ export async function generateStaticParams() {
   if (!url || !key) return []
 
   const supabase = createBareClient(url, key)
-  const today = new Date().toISOString().slice(0, 10)
+  // Pre-render only the last 2 UTC days (yesterday + today). Older dates are
+  // accessible via `dynamicParams = true` — first request renders on demand,
+  // then caches forever via `revalidate = false`. The 15.3 cron also warms
+  // today + tomorrow, so the joint warm window is yesterday/today/tomorrow.
+  // The previous unbounded query was silently capped at 10,000 rows by
+  // `.range(0, 9999)` after ~69 days of operation; the date filter below now
+  // makes that cap defensive (max 288 tuples = 2 days × 12 signs × 12 roles).
+  const now = Date.now()
+  const today = new Date(now).toISOString().slice(0, 10)
+  const yesterday = new Date(now - 86_400_000).toISOString().slice(0, 10)
   const { data } = await supabase
     .from('readings')
     .select('sign, role, date')
     .eq('suppressed', false)
+    .gte('date', yesterday)
     .lte('date', today)
     .range(0, 9999)
 
