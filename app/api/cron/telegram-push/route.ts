@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { sendTelegramMessage } from '@/lib/telegram'
 import { shouldDeactivateTelegramSubscriber } from '@/lib/telegram-push'
+import { stripJsonFence } from '@/lib/content'
 
 export const maxDuration = 60
 
@@ -12,9 +13,23 @@ type Subscriber = {
   timezone_offset: number
 }
 
+type ReadingContent = {
+  general_reading?: string
+  [key: string]: unknown
+}
+
+function extractGeneralReading(rawContent: string): string | null {
+  try {
+    const parsed = JSON.parse(stripJsonFence(rawContent)) as ReadingContent
+    return typeof parsed.general_reading === 'string' ? parsed.general_reading.trim() : null
+  } catch {
+    return null
+  }
+}
+
 function buildMessage(
   subscriber: Subscriber,
-  hasReading: boolean,
+  prose: string | null,
   today: string,
   baseUrl: string
 ): string {
@@ -25,14 +40,24 @@ function buildMessage(
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ')
 
-  if (!hasReading) {
-    return `<b>// 404tune — ${today}</b>\n\n// no reading available today — check back tomorrow.`
+  const header = `<b>// 404tune — ${displaySign} × ${displayRole} · ${today}</b>`
+
+  if (!prose) {
+    return `${header}\n\n// no reading available today — check back tomorrow.`
   }
 
   // Telegram auto-renders an OG link preview for the URL on its own line.
   // The dated URL is used so the message stays valid if opened later.
   const url = `${baseUrl}/${sign}/${role}/${today}`
-  return `<b>// 404tune — ${displaySign} × ${displayRole} · ${today}</b>\n\n${url}`
+  let msg = `${header}\n\n${prose}\n\n${url}`
+
+  // Hard cap at Telegram's 4096-char limit (very unlikely to hit with prose).
+  if (msg.length > 4096) {
+    const overhead = msg.length - prose.length
+    const room = 4096 - overhead - 1
+    msg = `${header}\n\n${prose.slice(0, room)}…\n\n${url}`
+  }
+  return msg
 }
 
 export async function GET(request: NextRequest) {
@@ -71,14 +96,21 @@ export async function GET(request: NextRequest) {
     try {
       const { data: reading } = await supabase
         .from('readings')
-        .select('id')
+        .select('content')
         .eq('sign', subscriber.sign)
         .eq('role', subscriber.role)
         .eq('date', today)
         .eq('suppressed', false)
         .maybeSingle()
 
-      const msg = buildMessage(subscriber, reading !== null, today, baseUrl)
+      const prose = reading ? extractGeneralReading(reading.content) : null
+      if (reading && prose === null) {
+        console.error(
+          `[telegram-push] failed to extract general_reading for ${subscriber.sign}/${subscriber.role}`
+        )
+      }
+
+      const msg = buildMessage(subscriber, prose, today, baseUrl)
 
       const res = await sendTelegramMessage(subscriber.chat_id, msg)
 
