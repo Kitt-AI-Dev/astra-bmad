@@ -30,9 +30,15 @@ type ParsedContent = {
 }
 
 function parseContent(content: string): ParsedContent {
+  // Strip markdown code fence if present — the LLM wraps JSON output in ```json...```
+  const stripped = content
+    .trim()
+    .replace(/^```(?:json)?\s*\n?/i, '')
+    .replace(/\n?```\s*$/, '')
+
   // Attempt JSON parse first (new format)
   try {
-    const parsed: unknown = JSON.parse(content)
+    const parsed: unknown = JSON.parse(stripped)
     if (parsed && typeof parsed === 'object' && typeof (parsed as Record<string, unknown>).heading === 'string') {
       const raw = parsed as Record<string, unknown>
       return {

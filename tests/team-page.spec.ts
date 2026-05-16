@@ -17,10 +17,14 @@ test('/team/[invalid-uuid] renders placeholder, not error page', async ({ page }
 
 test('/team renders without crashing', async ({ page }) => {
   await page.goto('http://localhost:3000/team')
-  await page.waitForLoadState('networkidle')
-  // Either redirected to /team/{uuid} or shows placeholder — either is acceptable
-  const url = page.url()
-  expect(url).toMatch(/\/team(\/[0-9a-f-]+)?$/)
+  // The page either redirects to /team/{uuid} or stays on /team showing the
+  // placeholder. Either is acceptable — `networkidle` is unreliable in dev mode
+  // because Turbopack's HMR client keeps polling. Wait for whichever resolves first.
+  await Promise.race([
+    page.waitForURL(/\/team\/[0-9a-f-]+$/, { timeout: 10_000 }),
+    page.waitForSelector("text=the stars haven't clocked in yet", { timeout: 10_000 }),
+  ])
+  expect(page.url()).toMatch(/\/team(\/[0-9a-f-]+)?$/)
 })
 
 test('NavMenu is present on homepage', async ({ page }) => {
