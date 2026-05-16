@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import { sendTelegramMessage } from '@/lib/telegram'
 import { shouldDeactivateTelegramSubscriber } from '@/lib/telegram-push'
 import { parseReading, buildMessage, type Subscriber } from '@/lib/telegram-push-message'
+import { computeTargetOffsets } from '@/lib/telegram-push-cohort'
 
 export const maxDuration = 60
 
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL!
 
   const currentHour = new Date().getUTCHours()
-  const targetOffset = 480 - currentHour * 60
+  const targetOffsets = computeTargetOffsets(currentHour)
   const today = new Date().toISOString().slice(0, 10)
 
   const supabase = await createClient()
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
     .from('telegram_subscribers')
     .select('chat_id, sign, role, timezone_offset')
     .eq('active', true)
-    .eq('timezone_offset', targetOffset)
+    .in('timezone_offset', targetOffsets)
 
   if (subError) {
     console.error('[telegram-push] failed to fetch subscribers:', subError.message)
