@@ -1,5 +1,6 @@
 import type { Sign, Role } from '@/lib/constants'
 import { SectionComment, MetricBar, MiniStat, CursedCommit } from './reading-sections'
+import { stripJsonFence } from '@/lib/content'
 
 export type Reading = {
   id: string
@@ -79,10 +80,7 @@ function tryParseStructured(input: string): {
 }
 
 function parseContent(content: string): ParsedContent {
-  const trimmed = content.trim()
-  const stripped = trimmed
-    .replace(/^```(?:json)?\s*\n?/i, '')
-    .replace(/\n?```\s*$/, '')
+  const stripped = stripJsonFence(content)
 
   if (stripped.startsWith('{')) {
     const parsed = tryParseStructured(stripped)

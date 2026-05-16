@@ -1,4 +1,5 @@
 import { SectionComment, MetricBar, MiniStat, CursedCommit } from './reading-sections'
+import { stripJsonFence } from '@/lib/content'
 
 type TeamReading = {
   id: string
@@ -30,11 +31,7 @@ type ParsedContent = {
 }
 
 function parseContent(content: string): ParsedContent {
-  // Strip markdown code fence if present — the LLM wraps JSON output in ```json...```
-  const stripped = content
-    .trim()
-    .replace(/^```(?:json)?\s*\n?/i, '')
-    .replace(/\n?```\s*$/, '')
+  const stripped = stripJsonFence(content)
 
   // Attempt JSON parse first (new format)
   try {

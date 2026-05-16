@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import { TEAM_ARCHETYPES } from '@/lib/constants'
 import { sendTelegramMessage } from '@/lib/telegram'
 import { shouldDeactivateTelegramSubscriber } from '@/lib/telegram-push'
+import { stripJsonFence } from '@/lib/content'
 
 export const maxDuration = 60
 
@@ -43,7 +44,7 @@ function buildMessage(
   if (reading) {
     let content: ReadingContent | null = null
     try {
-      content = JSON.parse(reading.content) as ReadingContent
+      content = JSON.parse(stripJsonFence(reading.content)) as ReadingContent
     } catch {
       console.error(`[telegram-push] failed to parse reading content for ${sign}/${role}`)
     }
@@ -66,7 +67,7 @@ function buildMessage(
     const archetype = TEAM_ARCHETYPES[teamReading.slot] ?? `Slot ${teamReading.slot}`
     let tc: TeamContent | null = null
     try {
-      tc = JSON.parse(teamReading.content) as TeamContent
+      tc = JSON.parse(stripJsonFence(teamReading.content)) as TeamContent
     } catch {
       console.error(`[telegram-push] failed to parse team reading content for slot ${teamReading.slot}`)
     }

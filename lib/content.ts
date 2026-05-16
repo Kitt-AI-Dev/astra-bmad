@@ -1,8 +1,14 @@
-export function extractDescription(rawContent: string, maxLength = 155): string {
-  const stripped = rawContent
-    .replace(/^```json\s*/i, '')
-    .replace(/\n?```\s*$/m, '')
+// LLM responses sometimes wrap JSON output in markdown code fences (```json...```).
+// Strip them before attempting JSON.parse. Safe to call on already-clean content.
+export function stripJsonFence(rawContent: string): string {
+  return rawContent
     .trim()
+    .replace(/^```(?:json)?\s*\n?/i, '')
+    .replace(/\n?```\s*$/, '')
+}
+
+export function extractDescription(rawContent: string, maxLength = 155): string {
+  const stripped = stripJsonFence(rawContent)
 
   try {
     const parsed = JSON.parse(stripped)
