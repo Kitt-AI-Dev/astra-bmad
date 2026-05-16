@@ -15,3 +15,16 @@ export function computeTargetOffsets(currentHour: number): [number, number] {
   const offsetB = offsetA + 1440
   return [offsetA, offsetB]
 }
+
+// Returns the UTC calendar date a subscriber sees as "today" given their
+// timezone offset (in minutes from UTC) at moment `nowMs`. For positive
+// offsets > 480 matched via the `offsetB` wraparound in computeTargetOffsets
+// (Tokyo, Sydney, Auckland, Line Is.) this yields tomorrow-UTC; for every
+// other cohort it yields today-UTC.
+//
+// Pure function — takes `nowMs` instead of calling Date.now() so a single
+// time source can be captured at the cron's handler entry and shared across
+// all subscribers in the run (prevents cross-midnight inconsistency).
+export function subscriberLocalDate(offsetMinutes: number, nowMs: number): string {
+  return new Date(nowMs + offsetMinutes * 60_000).toISOString().slice(0, 10)
+}

@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import { sendTelegramMessage } from '@/lib/telegram'
 import { shouldDeactivateTelegramSubscriber } from '@/lib/telegram-push'
 import { parseReading, buildMessage, type Subscriber } from '@/lib/telegram-push-message'
-import { computeTargetOffsets } from '@/lib/telegram-push-cohort'
+import { computeTargetOffsets, subscriberLocalDate } from '@/lib/telegram-push-cohort'
 
 export const maxDuration = 60
 
@@ -16,9 +16,16 @@ export async function GET(request: NextRequest) {
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL!
 
-  const currentHour = new Date().getUTCHours()
+  // Capture one time source for the whole run. `currentHour` and every
+  // subscriber's `localDate` are computed from the same `nowMs` so they all
+  // agree — this is load-bearing for the cohort invariant: the subscribers
+  // selected by `computeTargetOffsets(currentHour)` must receive a message
+  // dated for THEIR local 08:00, which is the same moment we used to pick
+  // them. Recomputing `nowMs` mid-loop could put earlier and later
+  // subscribers on different calendar dates if the run crosses UTC midnight.
+  const nowMs = Date.now()
+  const currentHour = new Date(nowMs).getUTCHours()
   const targetOffsets = computeTargetOffsets(currentHour)
-  const today = new Date().toISOString().slice(0, 10)
 
   const supabase = await createClient()
 
@@ -41,12 +48,25 @@ export async function GET(request: NextRequest) {
 
   for (const subscriber of subscribers as Subscriber[]) {
     try {
+      // Per-subscriber local date. For positive cohorts > 480 matched via
+      // computeTargetOffsets' offsetB (Tokyo, Sydney, Auckland, Line Is.)
+      // this yields tomorrow-UTC; for everyone else, today-UTC.
+      //
+      // Cache-warming note: the /api/revalidate cron runs at UTC midnight
+      // and populates the Data Cache for both today-UTC and tomorrow-UTC
+      // URLs across all 144 sign×role combos. That cache entry persists
+      // until the next deploy (`revalidate = false` on the dated page),
+      // so by the time positive cohorts fire later in the same UTC day
+      // (e.g. Sydney at 22:00 needing the date that morning-warmup called
+      // "tomorrow"), the URL still hits the warm cache.
+      const localDate = subscriberLocalDate(subscriber.timezone_offset, nowMs)
+
       const { data: reading } = await supabase
         .from('readings')
         .select('content')
         .eq('sign', subscriber.sign)
         .eq('role', subscriber.role)
-        .eq('date', today)
+        .eq('date', localDate)
         .eq('suppressed', false)
         .maybeSingle()
 
@@ -59,7 +79,7 @@ export async function GET(request: NextRequest) {
         )
       }
 
-      const msg = buildMessage(subscriber, prose, hasMetrics, today, baseUrl)
+      const msg = buildMessage(subscriber, prose, hasMetrics, localDate, baseUrl)
 
       const res = await sendTelegramMessage(subscriber.chat_id, msg)
 
