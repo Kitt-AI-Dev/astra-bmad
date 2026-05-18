@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { GenerateTeamSlotButton } from '@/components/admin/GenerateTeamSlotButton'
+import { VoteColumnHeaders, VoteCounts } from '@/components/admin/VoteColumns'
 
 type Status = 'published' | 'suppressed' | 'scheduled'
 
@@ -67,7 +68,7 @@ export default async function TeamReadingsPage({
 
   let readingsQuery = supabase
     .from('team_readings')
-    .select('id, date, slot, content, suppressed')
+    .select('id, date, slot, content, suppressed, likes_count, dislikes_count')
 
   if (selectedDate) {
     readingsQuery = readingsQuery.eq('date', selectedDate)
@@ -112,6 +113,7 @@ export default async function TeamReadingsPage({
                   <TableHead className="font-mono">archetype</TableHead>
                   <TableHead className="font-mono">content</TableHead>
                   <TableHead className="font-mono">status</TableHead>
+                  <VoteColumnHeaders />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -139,6 +141,7 @@ export default async function TeamReadingsPage({
                             <Badge variant={BADGE_VARIANT[status]}>{status}</Badge>
                           </Link>
                         </TableCell>
+                        <VoteCounts likes={r.likes_count} dislikes={r.dislikes_count} />
                       </TableRow>
                     )
                   }
@@ -150,6 +153,8 @@ export default async function TeamReadingsPage({
                       <TableCell className="px-4 py-2">
                         <GenerateTeamSlotButton slot={slot} date={selectedDate} />
                       </TableCell>
+                      <TableCell className="px-4 py-2" />
+                      <TableCell className="px-4 py-2" />
                     </TableRow>
                   )
                 })}
@@ -170,6 +175,7 @@ export default async function TeamReadingsPage({
               <TableHead className="font-mono">archetype</TableHead>
               <TableHead className="font-mono">content</TableHead>
               <TableHead className="font-mono">status</TableHead>
+              <VoteColumnHeaders />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -198,6 +204,7 @@ export default async function TeamReadingsPage({
                       <Badge variant={BADGE_VARIANT[status]}>{status}</Badge>
                     </Link>
                   </TableCell>
+                  <VoteCounts likes={r.likes_count} dislikes={r.dislikes_count} />
                 </TableRow>
               )
             })}
