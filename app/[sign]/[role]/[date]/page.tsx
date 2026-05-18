@@ -10,6 +10,7 @@ import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
 import { formatSign, formatRole } from '@/lib/format'
 import { extractDescription } from '@/lib/content'
+import { recordTelegramClick } from '@/lib/telegram-track-click'
 
 export const dynamicParams = true
 export const revalidate = false
@@ -92,10 +93,14 @@ export async function generateStaticParams() {
 
 export default async function DatePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ sign: string; role: string; date: string }>
+  searchParams: Promise<{ t?: string }>
 }) {
   const { sign, role, date } = await params
+  const { t } = await searchParams
+  if (t) recordTelegramClick(t).catch(() => {})
 
   if (!SIGNS.includes(sign as Sign) || !ROLES.includes(role as Role)) {
     notFound()

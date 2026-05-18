@@ -17,7 +17,8 @@ const SUBSCRIBER: Subscriber = {
 }
 const TODAY = '2026-05-16'
 const BASE = 'https://www.404tune.dev'
-const EXPECTED_URL = `${BASE}/aries/software-engineer/${TODAY}`
+const PUSH_ID = '00000000-0000-0000-0000-000000000000'
+const EXPECTED_URL = `${BASE}/aries/software-engineer/${TODAY}?t=${PUSH_ID}`
 
 // ---------------------------------------------------------------------------
 // parseReading
@@ -117,7 +118,7 @@ test('parseReading: empty general_reading → prose is empty string (not null)',
 // ---------------------------------------------------------------------------
 
 test('buildMessage: prose null → fallback message, no URL', () => {
-  const msg = buildMessage(SUBSCRIBER, null, false, TODAY, BASE)
+  const msg = buildMessage(SUBSCRIBER, null, false, TODAY, BASE, PUSH_ID)
   expect(msg).toBe(
     '<b>// 404tune — Aries × Software Engineer · 2026-05-16</b>\n\n' +
     '// no reading available today — check back tomorrow.'
@@ -127,13 +128,13 @@ test('buildMessage: prose null → fallback message, no URL', () => {
 })
 
 test('buildMessage: prose null + hasMetrics true → still the fallback (no teaser on no-reading)', () => {
-  const msg = buildMessage(SUBSCRIBER, null, true, TODAY, BASE)
+  const msg = buildMessage(SUBSCRIBER, null, true, TODAY, BASE, PUSH_ID)
   expect(msg).not.toContain(METRICS_TEASER)
   expect(msg).toContain('// no reading available today')
 })
 
 test('buildMessage: prose + no metrics → header + prose + URL, no teaser', () => {
-  const msg = buildMessage(SUBSCRIBER, 'today brings clarity', false, TODAY, BASE)
+  const msg = buildMessage(SUBSCRIBER, 'today brings clarity', false, TODAY, BASE, PUSH_ID)
   expect(msg).toBe(
     '<b>// 404tune — Aries × Software Engineer · 2026-05-16</b>\n\n' +
     'today brings clarity\n\n' +
@@ -143,7 +144,7 @@ test('buildMessage: prose + no metrics → header + prose + URL, no teaser', () 
 })
 
 test('buildMessage: prose + metrics → header + prose + teaser + URL', () => {
-  const msg = buildMessage(SUBSCRIBER, 'today brings clarity', true, TODAY, BASE)
+  const msg = buildMessage(SUBSCRIBER, 'today brings clarity', true, TODAY, BASE, PUSH_ID)
   expect(msg).toBe(
     '<b>// 404tune — Aries × Software Engineer · 2026-05-16</b>\n\n' +
     'today brings clarity\n\n' +
@@ -154,13 +155,13 @@ test('buildMessage: prose + metrics → header + prose + teaser + URL', () => {
 
 test('buildMessage: role with hyphens is title-cased per word', () => {
   const sub = { ...SUBSCRIBER, role: 'project-manager' }
-  const msg = buildMessage(sub, 'x', false, TODAY, BASE)
+  const msg = buildMessage(sub, 'x', false, TODAY, BASE, PUSH_ID)
   expect(msg).toContain('Aries × Project Manager')
 })
 
 test('buildMessage: very long prose is truncated, header + URL + teaser preserved, total ≤ 4096', () => {
   const longProse = 'a'.repeat(5000)
-  const msg = buildMessage(SUBSCRIBER, longProse, true, TODAY, BASE)
+  const msg = buildMessage(SUBSCRIBER, longProse, true, TODAY, BASE, PUSH_ID)
   expect(msg.length).toBeLessThanOrEqual(4096)
   expect(msg).toContain('<b>// 404tune')
   expect(msg).toContain(METRICS_TEASER)
@@ -171,7 +172,7 @@ test('buildMessage: very long prose is truncated, header + URL + teaser preserve
 
 test('buildMessage: long prose without metrics still truncates and keeps the URL', () => {
   const longProse = 'b'.repeat(5000)
-  const msg = buildMessage(SUBSCRIBER, longProse, false, TODAY, BASE)
+  const msg = buildMessage(SUBSCRIBER, longProse, false, TODAY, BASE, PUSH_ID)
   expect(msg.length).toBeLessThanOrEqual(4096)
   expect(msg).toContain(EXPECTED_URL)
   expect(msg).not.toContain(METRICS_TEASER)
@@ -181,7 +182,7 @@ test('buildMessage: empty-string prose triggers the fallback (handshake with par
   // parseReading('{"general_reading":""}') returns prose: '', and buildMessage
   // treats '' as falsy via `if (!prose)`. This test wires those two helpers'
   // edge-case contract together so a regression in either side is caught.
-  const msg = buildMessage(SUBSCRIBER, '', false, TODAY, BASE)
+  const msg = buildMessage(SUBSCRIBER, '', false, TODAY, BASE, PUSH_ID)
   expect(msg).toBe(
     '<b>// 404tune — Aries × Software Engineer · 2026-05-16</b>\n\n' +
     '// no reading available today — check back tomorrow.'

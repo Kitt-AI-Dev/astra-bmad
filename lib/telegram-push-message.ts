@@ -45,7 +45,8 @@ export function buildMessage(
   prose: string | null,
   hasMetrics: boolean,
   today: string,
-  baseUrl: string
+  baseUrl: string,
+  pushId: string,
 ): string {
   const { sign, role } = subscriber
   const displaySign = sign.charAt(0).toUpperCase() + sign.slice(1)
@@ -61,8 +62,9 @@ export function buildMessage(
   }
 
   // Telegram auto-renders an OG link preview for the URL on its own line.
-  // The dated URL is used so the message stays valid if opened later.
-  const url = `${baseUrl}/${sign}/${role}/${today}`
+  // The dated URL is used so the message stays valid if opened later. The
+  // `?t=<pushId>` token lets the destination page mark the click for CTR.
+  const url = `${baseUrl}/${sign}/${role}/${today}?t=${pushId}`
   const teaser = hasMetrics ? `${METRICS_TEASER}\n\n` : ''
   let msg = `${header}\n\n${prose}\n\n${teaser}${url}`
 

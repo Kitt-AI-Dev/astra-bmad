@@ -5,6 +5,7 @@ import { Header } from '@/components/Header'
 import { ShareFooter } from '@/components/ShareFooter'
 import { TeamReadingCard } from '@/components/TeamReadingCard'
 import { Footer } from '@/components/Footer'
+import { recordTelegramClick } from '@/lib/telegram-track-click'
 
 export const revalidate = false
 
@@ -79,10 +80,14 @@ export async function generateMetadata({
 
 export default async function TeamReadingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ t?: string }>
 }) {
   const { id } = await params
+  const { t } = await searchParams
+  if (t) recordTelegramClick(t).catch(() => {})
   const base = process.env.NEXT_PUBLIC_APP_URL!
 
   const supabase = createPublicClient()
