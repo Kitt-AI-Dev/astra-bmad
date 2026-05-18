@@ -135,6 +135,8 @@ export default async function SignRolePage({
               <ShareFooter
                 url={`${base}/${sign}/${role}/${reading.date}`}
                 telegramBotUrl={process.env.NEXT_PUBLIC_TELEGRAM_BOT_URL}
+                readingId={reading.id}
+                resourceType="readings"
               />
             )}
           </div>

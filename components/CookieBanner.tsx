@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { getConsent, setConsent } from '@/lib/consent'
@@ -19,6 +19,14 @@ export function CookieBanner() {
     () => getConsent() !== null,
     () => true,
   )
+
+  // Re-surfaced by ReadingReactions when a vote cookie write fails — gives
+  // the user a path to grant consent (or notice that cookies are blocked).
+  useEffect(() => {
+    const handler = () => setDismissed(false)
+    window.addEventListener('404tune:show-consent-banner', handler)
+    return () => window.removeEventListener('404tune:show-consent-banner', handler)
+  }, [])
 
   const shouldShow = !dismissed && !consentExists && !pathname.startsWith('/admin')
 

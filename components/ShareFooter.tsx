@@ -3,8 +3,16 @@
 import { useState, useRef, useEffect, useSyncExternalStore } from 'react'
 import { Send } from 'lucide-react'
 import { getPrefs } from '@/lib/cookies'
+import { ReadingReactions } from '@/components/ReadingReactions'
 
-export function ShareFooter({ url, telegramBotUrl }: { url: string; telegramBotUrl?: string }) {
+type ShareFooterProps = {
+  url: string
+  telegramBotUrl?: string
+  readingId?: string
+  resourceType?: 'readings' | 'team-readings'
+}
+
+export function ShareFooter({ url, telegramBotUrl, readingId, resourceType }: ShareFooterProps) {
   const [copied, setCopied] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -43,7 +51,12 @@ export function ShareFooter({ url, telegramBotUrl }: { url: string; telegramBotU
 
   return (
     <div className="mt-3">
-      <p className="text-[13px] font-mono text-text-secondary">exit 0</p>
+      <div className="flex justify-between items-center">
+        <p className="text-[13px] font-mono text-text-secondary">exit 0</p>
+        {readingId && resourceType && (
+          <ReadingReactions readingId={readingId} resourceType={resourceType} />
+        )}
+      </div>
       <div className="border-t border-border mt-5 pt-5 flex items-center gap-4">
         <button
           onClick={handleCopy}

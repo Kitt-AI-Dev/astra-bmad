@@ -162,7 +162,13 @@ export default async function DatePage({
           {'$ '}<span className="text-accent-violet">404tune</span>{` --sign ${sign} --role ${role} --date ${date}`}
         </h1>
         <ReadingCard reading={reading} nullVariant={date < today ? 'unavailable' : 'not-published'} />
-        {reading && <ShareFooter url={`${base}/${sign}/${role}/${reading.date}`} />}
+        {reading && (
+          <ShareFooter
+            url={`${base}/${sign}/${role}/${reading.date}`}
+            readingId={reading.id}
+            resourceType="readings"
+          />
+        )}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(creativeWorkSchema) }}
