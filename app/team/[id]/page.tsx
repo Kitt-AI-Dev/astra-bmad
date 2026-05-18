@@ -109,7 +109,11 @@ export default async function TeamReadingPage({
         </h1>
         <TeamReadingCard reading={state === 'ok' ? reading : null} state={state} />
         {state === 'ok' && reading && (
-          <ShareFooter url={`${base}/team/${reading.id}`} />
+          <ShareFooter
+            url={`${base}/team/${reading.id}`}
+            readingId={reading.id}
+            resourceType="team-readings"
+          />
         )}
         <Footer />
       </div>
