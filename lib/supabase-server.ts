@@ -4,9 +4,10 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 // Service-role client. Three caller classes today:
 //   - /admin pages and /api/admin/* — auth enforced by middleware.ts
 //   - /api/cron/*                   — auth enforced by CRON_SECRET in the route
-//   - /api/{readings,team-readings}/[id]/{like,dislike} — PUBLIC by design
-//     (v1 reaction endpoints; see Epic 16 / Story 16.1). Counter writes are
-//     the only mutation; trust model is "anyone with a reading id can vote".
+//   - /api/{readings,team-readings}/[id]/{like,dislike,share} — PUBLIC by
+//     design (v1 reaction + share endpoints; see Epic 16 / Story 16.1 and
+//     Epic 17 / Story 17.1). Counter writes are the only mutation; trust
+//     model is "anyone with a reading id can vote or record a share".
 // Using the SSR client here would attach the user's JWT and break
 // RLS-protected writes for the first two classes.
 export async function createClient() {

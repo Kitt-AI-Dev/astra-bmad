@@ -17,6 +17,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { GenerateReadingPanel } from '@/components/admin/GenerateReadingPanel'
 import { VoteColumnHeaders, VoteCounts } from '@/components/admin/VoteColumns'
+import { ShareColumnHeader, ShareCount } from '@/components/admin/ShareColumn'
 
 type Status = 'published' | 'suppressed' | 'scheduled'
 
@@ -70,7 +71,7 @@ export default async function ReadingsPage({
 
   let readingsQuery = supabase
     .from('readings')
-    .select('id, sign, role, date, content, suppressed, likes_count, dislikes_count')
+    .select('id, sign, role, date, content, suppressed, likes_count, dislikes_count, share_count')
 
   if (selectedDate) {
     readingsQuery = readingsQuery.eq('date', selectedDate)
@@ -113,6 +114,7 @@ export default async function ReadingsPage({
               <TableHead className="font-mono">content</TableHead>
               <TableHead className="font-mono">status</TableHead>
               <VoteColumnHeaders />
+              <ShareColumnHeader />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -141,6 +143,7 @@ export default async function ReadingsPage({
                     </Link>
                   </TableCell>
                   <VoteCounts likes={r.likes_count} dislikes={r.dislikes_count} />
+                  <ShareCount count={r.share_count} />
                 </TableRow>
               )
             })}

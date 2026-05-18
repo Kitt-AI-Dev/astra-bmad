@@ -39,13 +39,17 @@ export function ShareFooter({ url, telegramBotUrl, readingId, resourceType }: Sh
   }, [])
 
   async function handleCopy() {
+    if (readingId && resourceType) {
+      fetch(`/api/${resourceType}/${readingId}/share`, { method: 'POST' }).catch(() => {})
+    }
+    const shareUrl = `${url}?utm_source=share&utm_medium=clipboard&utm_campaign=reading`
     try {
-      await navigator.clipboard.writeText(url)
+      await navigator.clipboard.writeText(shareUrl)
       if (timerRef.current) clearTimeout(timerRef.current)
       setCopied(true)
       timerRef.current = setTimeout(() => setCopied(false), 2000)
     } catch {
-      window.prompt('Copy this link:', url)
+      window.prompt('Copy this link:', shareUrl)
     }
   }
 
