@@ -48,6 +48,12 @@ export async function GET(request: NextRequest) {
 
   for (const subscriber of subscribers as Subscriber[]) {
     try {
+      // Per-(subscriber, cron tick) UUID. Embedded in the message URL as
+      // `?t=<push_id>` and logged in telegram_push_events on successful
+      // send so the destination page can flip clicked_at when the
+      // subscriber opens the link. See Epic 17 / Story 17.2.
+      const pushId = crypto.randomUUID()
+
       // Per-subscriber local date. For positive cohorts > 480 matched via
       // computeTargetOffsets' offsetB (Tokyo, Sydney, Auckland, Line Is.)
       // this yields tomorrow-UTC; for everyone else, today-UTC.
@@ -79,7 +85,7 @@ export async function GET(request: NextRequest) {
         )
       }
 
-      const msg = buildMessage(subscriber, prose, hasMetrics, localDate, baseUrl)
+      const msg = buildMessage(subscriber, prose, hasMetrics, localDate, baseUrl, pushId)
 
       const res = await sendTelegramMessage(subscriber.chat_id, msg)
 
@@ -98,10 +104,25 @@ export async function GET(request: NextRequest) {
         if (shouldDeactivateTelegramSubscriber(res.status)) {
           await supabase
             .from('telegram_subscribers')
-            .update({ active: false })
+            .update({
+              active: false,
+              unsubscribed_at: new Date().toISOString(),
+              unsubscribe_source: 'api_error',
+            })
             .eq('chat_id', subscriber.chat_id)
         }
       } else {
+        // Log the delivered push for CTR tracking. Insert failure does not
+        // block the sent++ increment — a missed event row is a missed CTR
+        // data point, not a delivery failure.
+        const { error: insertErr } = await supabase
+          .from('telegram_push_events')
+          .insert({ push_id: pushId, subscriber_id: subscriber.chat_id })
+        if (insertErr) {
+          console.warn(
+            `[telegram-push] failed to insert push_event for chat_id=${subscriber.chat_id}: ${insertErr.message}`
+          )
+        }
         sent++
       }
     } catch (err) {

@@ -185,7 +185,11 @@ async function handleMessage(message: TelegramMessage, deps: TelegramWebhookDeps
     const supabase = await deps.createClient()
     const result = await supabase
       .from('telegram_subscribers')
-      .update({ active: false })
+      .update({
+        active: false,
+        unsubscribed_at: new Date().toISOString(),
+        unsubscribe_source: 'user',
+      })
       .eq('chat_id', Number(chatId))
     assertDbOk(result, '/stop update')
 
